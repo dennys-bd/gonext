@@ -10,8 +10,8 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"personal-life/backend/tracks/domain"
-	"personal-life/backend/tracks/internal/application"
+	"[PROJECT-NAME]/backend/tracks/domain"
+	"[PROJECT-NAME]/backend/tracks/internal/application"
 )
 
 type createStubInput struct {

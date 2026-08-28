@@ -9,8 +9,8 @@ import {
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "personal-life",
-  description: "personal-life frontend",
+  title: "[PROJECT-NAME]",
+  description: "[PROJECT-NAME] frontend",
 };
 
 export default function RootLayout({

@@ -6,7 +6,7 @@ This document tracks implementation status, open design questions, and prioritiz
 
 ## Core Foundations (Always Included)
 
-**Status legend**: `Templated` = code exists, but it's what was copied verbatim from `personal-life`, the SaaS app this template was extracted from — functionally correct there, but not yet adapted to be scaffold-safe (no pack-selection branching, possibly SaaS-specific assumptions baked in) or tested as a generated project's output. `Pending` = not built yet. Neither reaches a real "done" state until the CLI (*Prioritized Next Steps* below) exists to actually generate a project from it and prove it out.
+**Status legend**: `Templated` = code exists, but it's what was copied verbatim from the SaaS app this template was extracted from — functionally correct there, but not yet adapted to be scaffold-safe (no pack-selection branching, possibly SaaS-specific assumptions baked in) or tested as a generated project's output. `Pending` = not built yet. Neither reaches a real "done" state until the CLI (*Prioritized Next Steps* below) exists to actually generate a project from it and prove it out.
 
 | Component | Technology | Description | Status |
 |---|---|---|---|

@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"personal-life/backend/tracks/domain"
+	"[PROJECT-NAME]/backend/tracks/domain"
 )
 
 func TestStubRepository_CreateAndGet(t *testing.T) {

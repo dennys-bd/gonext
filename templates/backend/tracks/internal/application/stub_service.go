@@ -8,7 +8,7 @@ import (
 	"encoding/hex"
 	"time"
 
-	"personal-life/backend/tracks/domain"
+	"[PROJECT-NAME]/backend/tracks/domain"
 )
 
 // StubService implements the tracks domain's stub use cases.

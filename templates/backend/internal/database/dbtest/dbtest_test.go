@@ -8,8 +8,8 @@ import (
 
 	"github.com/uptrace/bun"
 
-	"personal-life/backend/internal/database"
-	"personal-life/backend/internal/database/dbtest"
+	"[PROJECT-NAME]/backend/internal/database"
+	"[PROJECT-NAME]/backend/internal/database/dbtest"
 )
 
 func requireTestDB(t *testing.T) {

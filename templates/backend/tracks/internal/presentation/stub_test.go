@@ -7,8 +7,8 @@ import (
 
 	"github.com/danielgtaylor/huma/v2/humatest"
 
-	"personal-life/backend/tracks/internal/application"
-	"personal-life/backend/tracks/internal/infrastructure/memory"
+	"[PROJECT-NAME]/backend/tracks/internal/application"
+	"[PROJECT-NAME]/backend/tracks/internal/infrastructure/memory"
 )
 
 func newTestAPI(t *testing.T) humatest.TestAPI {

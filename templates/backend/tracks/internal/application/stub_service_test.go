@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"personal-life/backend/tracks/domain"
-	"personal-life/backend/tracks/internal/infrastructure/memory"
+	"[PROJECT-NAME]/backend/tracks/domain"
+	"[PROJECT-NAME]/backend/tracks/internal/infrastructure/memory"
 )
 
 func TestStubService_CreateAndGet(t *testing.T) {

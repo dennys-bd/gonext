@@ -11,7 +11,7 @@ import (
 
 	"github.com/uptrace/bun"
 
-	"personal-life/backend/tracks/domain"
+	"[PROJECT-NAME]/backend/tracks/domain"
 )
 
 var _ domain.StubRepository = (*StubRepository)(nil)

@@ -7,9 +7,9 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/uptrace/bun"
 
-	"personal-life/backend/tracks/internal/application"
-	"personal-life/backend/tracks/internal/infrastructure/postgres"
-	"personal-life/backend/tracks/internal/presentation"
+	"[PROJECT-NAME]/backend/tracks/internal/application"
+	"[PROJECT-NAME]/backend/tracks/internal/infrastructure/postgres"
+	"[PROJECT-NAME]/backend/tracks/internal/presentation"
 )
 
 // Register wires up the tracks domain's dependencies and registers its

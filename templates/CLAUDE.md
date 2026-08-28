@@ -1,4 +1,4 @@
-# personal-life
+# [PROJECT-NAME]
 
 Monorepo root. See `README.md` for the app layout and `docs/superpowers/specs/` for architecture decisions.
 

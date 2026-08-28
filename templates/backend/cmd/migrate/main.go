@@ -12,9 +12,9 @@ import (
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/migrate"
 
-	"personal-life/backend/internal/config"
-	"personal-life/backend/internal/database"
-	"personal-life/backend/internal/database/migrations"
+	"[PROJECT-NAME]/backend/internal/config"
+	"[PROJECT-NAME]/backend/internal/database"
+	"[PROJECT-NAME]/backend/internal/database/migrations"
 )
 
 func main() {

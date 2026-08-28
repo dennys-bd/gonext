@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"personal-life/backend/internal/config"
+	"[PROJECT-NAME]/backend/internal/config"
 )
 
 func TestNewLogger_SuppressesBelowConfiguredLevel(t *testing.T) {
