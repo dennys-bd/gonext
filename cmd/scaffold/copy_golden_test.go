@@ -5,6 +5,8 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 	"testing"
 
 	gonext "github.com/dennys-bd/gonext"
@@ -12,27 +14,36 @@ import (
 )
 
 // goldenSlug is the project slug used to generate the golden fixture
-// tree. It must stay in sync with the slug baked into
-// testdata/golden's substituted content: regenerate the fixture (see
-// TestCopy_GoldenSnapshot) if it ever changes.
+// tree. It must stay in sync with cmd/golden's own goldenSlug and the
+// slug baked into golden/'s substituted content: run `make golden` to
+// regenerate golden/ if it ever changes.
 const goldenSlug = "golden-app"
 
-const goldenDir = "testdata/golden"
+// goldenDir is the committed, runnable golden/ dev tree at the repo
+// root (see docs/superpowers/specs/2026-08-28-golden-app-runnable-tree-design.md),
+// resolved relative to this package's directory.
+const goldenDir = "../../golden"
 
 // TestCopy_GoldenSnapshot pins the real, full templates/ tree's
-// copy+substitution output byte-for-byte against a checked-in golden
-// fixture. Unlike internal/scaffold's own copy tests, which exercise
-// Copy against a small synthetic fixture, this test runs Copy against
-// the actual embedded templates/ tree used by `gonext init`, so it
-// catches unintended output changes from either the copy/substitution
-// logic or edits to templates/ itself. It hits no network or Docker,
-// so it runs in the normal fast `go test` loop.
+// copy+substitution output byte-for-byte against the committed
+// golden/ dev tree. Unlike internal/scaffold's own copy tests, which
+// exercise Copy against a small synthetic fixture, this test runs
+// Copy against the actual embedded templates/ tree used by `gonext
+// init`, so it catches unintended output changes from either the
+// copy/substitution logic or edits to templates/ itself. It hits no
+// network or Docker, so it runs in the normal fast `go test` loop.
 //
-// When a template change is intentional, regenerate the fixture with:
+// golden/'s own go.mod/go.sum and its tool-generated build output
+// (frontend/node_modules/, frontend/.next/, backend/bin/) are
+// excluded from the comparison via isGeneratedArtifact: Copy never
+// writes those, so they were never part of the comparison even when
+// this test's fixture was testdata/golden (which never had them).
 //
-//	UPDATE_GOLDEN=1 go test ./cmd/scaffold/ -run TestCopy_GoldenSnapshot
+// When a template change is intentional, regenerate golden/ with:
 //
-// then review the resulting testdata/golden diff before committing it.
+//	make golden
+//
+// then review the resulting golden/ diff before committing it.
 func TestCopy_GoldenSnapshot(t *testing.T) {
 	dest := t.TempDir()
 
@@ -40,15 +51,67 @@ func TestCopy_GoldenSnapshot(t *testing.T) {
 		t.Fatalf("Copy: unexpected error: %v", err)
 	}
 
-	if os.Getenv("UPDATE_GOLDEN") != "" {
-		if err := updateGolden(dest); err != nil {
-			t.Fatalf("updating golden fixture: %v", err)
+	assertTreesEqual(t, goldenDir, dest)
+}
+
+// generatedDirs are top-level directories under golden/ that Copy()
+// never writes: dependencies pnpm/go install and build output `make
+// golden`'s underlying `gonext init` run produces. They're excluded
+// from the golden-snapshot comparison — and, critically, never
+// descended into during the walk below, since pnpm's node_modules
+// layout uses symlinked directories that a naive file-read chokes on.
+var generatedDirs = []string{
+	"frontend/node_modules",
+	"frontend/.next",
+	"backend/bin",
+}
+
+// generatedFiles are top-level files under golden/ that Copy() never
+// writes because a later runInit step produces them: go.mod/go.sum
+// (via `go mod init`/`tidy`) and .env (copied from the .env.example
+// Copy() does write).
+var generatedFiles = []string{"go.mod", "go.sum", ".env"}
+
+// isGeneratedArtifact reports whether rel is a tool-generated path
+// under golden/ that Copy never writes and so must be excluded from
+// the golden-snapshot comparison.
+func isGeneratedArtifact(rel string) bool {
+	if slices.Contains(generatedFiles, rel) {
+		return true
+	}
+	for _, dir := range generatedDirs {
+		if rel == dir || strings.HasPrefix(rel, dir+"/") {
+			return true
 		}
-		t.Logf("regenerated %s from actual Copy output; review the diff before committing", goldenDir)
-		return
+	}
+	return false
+}
+
+func TestIsGeneratedArtifact(t *testing.T) {
+	tests := []struct {
+		rel  string
+		want bool
+	}{
+		{rel: "go.mod", want: true},
+		{rel: "go.sum", want: true},
+		{rel: ".env", want: true},
+		{rel: ".env.example", want: false},
+		{rel: "frontend/node_modules", want: true},
+		{rel: "frontend/node_modules/next/package.json", want: true},
+		{rel: "frontend/.next/build-manifest.json", want: true},
+		{rel: "backend/bin/server", want: true},
+		{rel: "backend/cmd/server/main.go", want: false},
+		{rel: "frontend/package.json", want: false},
+		{rel: "README.md", want: false},
 	}
 
-	assertTreesEqual(t, goldenDir, dest)
+	for _, tt := range tests {
+		t.Run(tt.rel, func(t *testing.T) {
+			if got := isGeneratedArtifact(tt.rel); got != tt.want {
+				t.Errorf("isGeneratedArtifact(%q) = %v, want %v", tt.rel, got, tt.want)
+			}
+		})
+	}
 }
 
 // assertTreesEqual reports every path where the dest tree differs
@@ -59,12 +122,21 @@ func assertTreesEqual(t *testing.T, want, dest string) {
 
 	wantFiles := map[string][]byte{}
 	err := filepath.WalkDir(want, func(path string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() {
+		if err != nil {
 			return err
 		}
 		rel, err := filepath.Rel(want, path)
 		if err != nil {
 			return err
+		}
+		if d.IsDir() {
+			if isGeneratedArtifact(rel) {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if isGeneratedArtifact(rel) {
+			return nil
 		}
 		data, err := os.ReadFile(path)
 		if err != nil {
@@ -112,33 +184,4 @@ func assertTreesEqual(t *testing.T, want, dest string) {
 			t.Errorf("%s: unexpected file in Copy output, not present in golden fixture", rel)
 		}
 	}
-}
-
-// updateGolden replaces testdata/golden with a copy of dest.
-func updateGolden(dest string) error {
-	if err := os.RemoveAll(goldenDir); err != nil {
-		return err
-	}
-	return filepath.WalkDir(dest, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		rel, err := filepath.Rel(dest, path)
-		if err != nil {
-			return err
-		}
-		target := filepath.Join(goldenDir, rel)
-		if d.IsDir() {
-			return os.MkdirAll(target, 0o755)
-		}
-		info, err := d.Info()
-		if err != nil {
-			return err
-		}
-		data, err := os.ReadFile(path)
-		if err != nil {
-			return err
-		}
-		return os.WriteFile(target, data, info.Mode().Perm())
-	})
 }
