@@ -1,4 +1,4 @@
-# personal-life
+# [PROJECT-NAME]
 
 Monorepo root.
 

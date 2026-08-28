@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"personal-life/backend/internal/database/dbtest"
-	"personal-life/backend/tracks/domain"
-	"personal-life/backend/tracks/internal/infrastructure/postgres"
+	"[PROJECT-NAME]/backend/internal/database/dbtest"
+	"[PROJECT-NAME]/backend/tracks/domain"
+	"[PROJECT-NAME]/backend/tracks/internal/infrastructure/postgres"
 )
 
 func TestStubRepository_CreateAndGet(t *testing.T) {

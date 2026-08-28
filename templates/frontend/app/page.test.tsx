@@ -6,7 +6,7 @@ describe("Page", () => {
   it("renders the placeholder home page without error", () => {
     render(<Page />);
     expect(
-      screen.getByRole("heading", { level: 1, name: "personal-life" }),
+      screen.getByRole("heading", { level: 1, name: "[PROJECT-NAME]" }),
     ).toBeInTheDocument();
   });
 });

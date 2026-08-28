@@ -7,11 +7,11 @@ import (
 
 	"github.com/google/wire"
 
-	"personal-life/backend/internal/config"
-	"personal-life/backend/internal/database"
-	"personal-life/backend/internal/logging"
-	"personal-life/backend/internal/presentation/api"
-	"personal-life/backend/tracks"
+	"[PROJECT-NAME]/backend/internal/config"
+	"[PROJECT-NAME]/backend/internal/database"
+	"[PROJECT-NAME]/backend/internal/logging"
+	"[PROJECT-NAME]/backend/internal/presentation/api"
+	"[PROJECT-NAME]/backend/tracks"
 )
 
 // InitializeApp builds the full dependency graph — config, logger, DB

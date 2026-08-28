@@ -6,7 +6,7 @@ import (
 	"context"
 	"sync"
 
-	"personal-life/backend/tracks/domain"
+	"[PROJECT-NAME]/backend/tracks/domain"
 )
 
 var _ domain.StubRepository = (*StubRepository)(nil)

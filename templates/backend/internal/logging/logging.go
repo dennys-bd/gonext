@@ -7,7 +7,7 @@ import (
 	"log/slog"
 	"os"
 
-	"personal-life/backend/internal/config"
+	"[PROJECT-NAME]/backend/internal/config"
 )
 
 // New builds a slog.Logger writing to stdout, configured by cfg's

@@ -13,7 +13,7 @@ import (
 
 	"github.com/uptrace/bun"
 
-	"personal-life/backend/internal/database"
+	"[PROJECT-NAME]/backend/internal/database"
 )
 
 // New opens an outer transaction against TEST_DATABASE_URL and

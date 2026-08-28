@@ -6,9 +6,9 @@ import (
 
 	"github.com/labstack/echo/v4"
 
-	"personal-life/backend/internal/config"
-	"personal-life/backend/internal/presentation/api"
-	"personal-life/backend/tracks"
+	"[PROJECT-NAME]/backend/internal/config"
+	"[PROJECT-NAME]/backend/internal/presentation/api"
+	"[PROJECT-NAME]/backend/tracks"
 )
 
 // App bundles what main needs once wire has built and registered
