@@ -1,0 +1,5 @@
+module [PROJECT-NAME]
+
+require (
+	"[PROJECT-NAME]/backend/tracks"
+)
