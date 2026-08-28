@@ -6,6 +6,7 @@
 
 # Kept locally only, not pushed to remote
 /docs/superpowers/plans/
+/docs/superpowers/specs/
 
 # Subagent-driven-development scratch workspace (ledgers, briefs, review packages)
 .superpowers/
