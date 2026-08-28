@@ -1,0 +1,32 @@
+pre-commit:
+  parallel: false
+  commands:
+    go-format:
+      glob: "*.go"
+      run: mise exec -- gofmt -l -w {staged_files}
+      stage_fixed: true
+    frontend-format:
+      root: "frontend/"
+      glob: "*.{ts,tsx,js,jsx,json}"
+      run: mise exec -- pnpm exec biome format --write {staged_files}
+      stage_fixed: true
+    go-lint:
+      glob: "*.go"
+      run: make lint
+    go-vulncheck:
+      glob: "*.go"
+      run: make vulncheck
+    go-generate-check:
+      glob: "*.go"
+      run: make generate-check
+    frontend-lint:
+      glob: "frontend/**/*.{ts,tsx,js,jsx}"
+      run: make frontend-lint
+    frontend-typecheck:
+      glob: "frontend/**/*.{ts,tsx}"
+      run: make frontend-typecheck
+    frontend-audit:
+      glob: "frontend/package.json"
+      run: make frontend-audit
+    secrets-scan:
+      run: mise exec -- gitleaks protect --staged --redact -v

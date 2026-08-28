@@ -96,6 +96,22 @@ func TestCopy_BinaryFileUnchanged(t *testing.T) {
 	}
 }
 
+func TestCopy_WritesWritableFiles(t *testing.T) {
+	dest := t.TempDir()
+
+	if err := Copy(fixtureFS, "testdata/fixture", dest, "my-app"); err != nil {
+		t.Fatalf("Copy: unexpected error: %v", err)
+	}
+
+	info, err := os.Stat(filepath.Join(dest, "README.md"))
+	if err != nil {
+		t.Fatalf("stat README.md: %v", err)
+	}
+	if info.Mode().Perm()&0o200 == 0 {
+		t.Errorf("README.md mode = %v, want owner-writable (embed.FS files are always read-only; Copy must not propagate that mode to its output)", info.Mode().Perm())
+	}
+}
+
 func TestCopy_SkipsGoModAndGoSum(t *testing.T) {
 	// A real "go.mod" file can't live inside an embed.FS fixture here:
 	// go:embed treats any directory containing one as a separate
