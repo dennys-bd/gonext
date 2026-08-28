@@ -1,0 +1,17 @@
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  default: standard
+  enable:
+    - gocritic
+    - revive
+    - gocyclo
+    - dupl
+  settings:
+    gocyclo:
+      min-complexity: 15
+    dupl:
+      threshold: 100

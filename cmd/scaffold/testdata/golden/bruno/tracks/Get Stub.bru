@@ -1,0 +1,23 @@
+meta {
+  name: Get Stub
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/stubs/{{stubId}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}
+
+tests {
+  test("returns the stub created by Create Stub", function () {
+    const body = res.getBody();
+    expect(body.id).to.equal(bru.getVar("stubId"));
+    expect(body.name).to.equal("demo");
+  });
+}
