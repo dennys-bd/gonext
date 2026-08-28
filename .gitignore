@@ -1,0 +1,49 @@
+# OMC operational state (not committed; see CLAUDE.md worktree_paths)
+.omc/
+
+# Per-machine Claude Code overrides (e.g. graphify's PreToolUse hooks), not shared
+.claude/settings.local.json
+
+# Kept locally only, not pushed to remote
+/docs/superpowers/plans/
+
+# Subagent-driven-development scratch workspace (ledgers, briefs, review packages)
+.superpowers/
+
+# If you prefer the allow list template instead of the deny list, see community template:
+# https://github.com/github/gitignore/blob/main/community/Golang/Go.AllowList.gitignore
+#
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Code coverage profiles and other test artifacts
+*.out
+coverage.*
+*.coverprofile
+profile.cov
+
+# Dependency directories (remove the comment below to include it)
+# vendor/
+
+# Go workspace file
+go.work
+go.work.sum
+
+/backend/bin/
+
+# env file
+.env
+
+# Editor/IDE
+# .idea/
+# .vscode/
+
+# OS cruft
+.DS_Store

@@ -1,0 +1,36 @@
+meta {
+  name: Create Stub
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/stubs
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "name": "demo"
+  }
+}
+
+assert {
+  res.status: eq 201
+}
+
+tests {
+  test("returns a non-empty id and echoes the name", function () {
+    const body = res.getBody();
+    expect(body.id).to.be.a("string").and.not.empty;
+    expect(body.name).to.equal("demo");
+    expect(body.createdAt).to.be.a("string").and.not.empty;
+  });
+}
+
+script:post-response {
+  if (res.status === 201) {
+    bru.setVar("stubId", res.body.id);
+  }
+}
