@@ -6,29 +6,41 @@ This document tracks implementation status, open design questions, and prioritiz
 
 ## Core Foundations (Always Included)
 
-**Status legend**: `Templated` = code exists, but it's what was copied verbatim from the SaaS app this template was extracted from — functionally correct there, but not yet adapted to be scaffold-safe (no pack-selection branching, possibly SaaS-specific assumptions baked in) or tested as a generated project's output. `Pending` = not built yet. Neither reaches a real "done" state until the CLI (*Prioritized Next Steps* below) exists to actually generate a project from it and prove it out.
+**Priority order for what's still `Pending` below:**
+
+1. **Authentication & RBAC → Auth Foundation → Auth Provider Abstraction** — internally ordered, each depends on the one before it.
+2. **Frontend-Backend Integration** — depends on Auth Foundation existing first, to carry identity through the typed client.
+3. **Scaffolding CLI — add & dev-loop generators**, **Backend Live-Reload** — CLI/dev-loop completeness, independent of Auth.
+4. **Contract Sync & Reverse URLs**, **E2E Testing** (Playwright) — frontend/testing completeness, independent of Auth.
+5. **Agent Guardrails (Codex/other)** (`AGENTS.md`), **Spec-Driven Docs Tree** — docs/guardrails completeness, independent of Auth.
+6. **Security Baseline**, **Production Containerization** — production readiness, last since it hardens what the rest of this list builds.
 
 | Component | Technology | Description | Status |
 |---|---|---|---|
-| **Backend Framework** | [Echo](https://echo.labstack.com/) + [Huma v2](https://huma.rocks/) | Fast Go HTTP router with automatic OpenAPI 3.1 schema generation and runtime validation. Default engine for the REST tier of the API Protocol Layer — see *API Protocol Layer* below for GraphQL/gRPC alternatives. | Templated |
-| **Server Lifecycle** | `signal.NotifyContext` | Graceful shutdown with connection draining on SIGTERM/SIGINT (`templates/backend/cmd/server/main.go`). | Templated |
-| **Configuration** | Typed Config + `mise` | Centralized type-safe environment configuration with `.env.example` validation. | Templated |
-| **Logging & Correlation** | Standard `log/slog` | Structured JSON logging with request correlation ID injection (`X-Request-ID`). | Templated |
-| **Database Layer** | PostgreSQL + `pgxpool` + [Bun](https://bun.uptrace.dev/) ORM | `pgxpool`-backed connection pool wrapped as a `database/sql` handle for Bun, giving struct-tag-mapped queries (`NewSelect`/`NewInsert`/etc.) with Postgres-aware pooling underneath (`templates/backend/internal/database/database.go`). | Templated |
-| **Schema Migrations** | `goose` or `golang-migrate` | Versioned SQL migrations with dedicated Makefile targets and CI verification. | Templated |
-| **Authentication & RBAC** | Argon2id + Sessions/JWT + Role Middleware | Built-in authentication (secure `HttpOnly` cookies / JWT), password hashing (Argon2id), password reset, and role permissions. | Templated |
-| **Auth Foundation** | Auth middleware + identity context injection | Authentication middleware hook that runs on every Huma-routed request and injects the authenticated user's identity into the handler's context, so handlers can read "current user" without re-deriving it from the raw session/JWT each time. Distinct from Auth Provider Abstraction below (this is the wiring mechanism; that is the swappable provider). | **Pending** |
+| **Backend Framework** | [Echo](https://echo.labstack.com/) + [Huma v2](https://huma.rocks/) | Fast Go HTTP router with automatic OpenAPI 3.1 schema generation and runtime validation. Default engine for the REST tier of the API Protocol Layer — see *API Protocol Layer* below for GraphQL/gRPC alternatives. | Done |
+| **Server Lifecycle** | `signal.NotifyContext` | Graceful shutdown with connection draining on SIGTERM/SIGINT (`templates/backend/cmd/server/main.go`). | Done |
+| **Configuration** | Typed Config + `mise` | Centralized type-safe environment configuration with `.env.example` validation. | Done |
+| **Logging & Correlation** | Standard `log/slog` | Structured JSON logging with request correlation ID injection (`X-Request-ID`). | Done |
+| **Database Layer** | PostgreSQL + `pgxpool` + [Bun](https://bun.uptrace.dev/) ORM | `pgxpool`-backed connection pool wrapped as a `database/sql` handle for Bun, giving struct-tag-mapped queries (`NewSelect`/`NewInsert`/etc.) with Postgres-aware pooling underneath (`templates/backend/internal/database/database.go`). | Done |
+| **Schema Migrations** | Bun's own `migrate.NewMigrations()` | Hand-written Postgres schema migrations registered with Bun's migrator, applied only via `backend/cmd/migrate` (`templates/backend/internal/database/migrations/`). Not `goose`/`golang-migrate` — earlier drafts of this table named the wrong tool. | Done |
+| **Authentication & RBAC** | Argon2id + Sessions/JWT + Role Middleware | Built-in authentication (secure `HttpOnly` cookies / JWT), password hashing (Argon2id), password reset, and role permissions. Not started: no session, password, or user-model code exists anywhere in `templates/` yet, despite earlier drafts of this table marking it done. | **Pending** |
+| **Auth Foundation** | Auth middleware + identity context injection | Authentication middleware hook that runs on every Huma-routed request and injects the authenticated user's identity into the handler's context, so handlers can read "current user" without re-deriving it from the raw session/JWT each time. Distinct from Auth Provider Abstraction below (this is the wiring mechanism; that is the swappable provider). Blocked on Authentication & RBAC above — there is no session/JWT layer yet to wire into request context. | **Pending** |
 | **Auth Provider Abstraction** | Swappable provider interface (Clerk / Supabase / Auth0 adapters) | A provider-abstraction interface around the core auth module so the homegrown Argon2id/session implementation stays the default, but a project can swap in a third-party auth provider without restructuring the auth layer. Core (not a Feature Pack) since every project's identity boundary should be swappable from day one, not bolted on later. | **Pending** |
-| **Health Probes** | `/healthz` & `/readyz` | Liveness and readiness endpoints with active database ping checks. | Templated |
-| **Frontend Framework** | [Next.js](https://nextjs.org/) (App Router) | Modern React 19 + TypeScript frontend with Server Components and Mantine UI. | Templated |
-| **Contract Sync & Reverse URLs** | `openapi-typescript` / `@hey-api/openapi-ts` + `openapi-fetch` | Auto-generated TypeScript types and type-safe reverse API URL client (`api.users.getById({ params: { id } })`), eliminating hardcoded URL strings. REST-tier client; GraphQL/gRPC tiers use their own codegen — see *API Protocol Layer* below. | Templated |
-| **QA & Testing** | `testcontainers-go`, Bruno, Playwright | Ephemeral container testing for Postgres (`testcontainers-go`), API smoke tests (`make smoke`), and Playwright full-stack E2E. | Templated |
-| **Agentic Guardrails** | `AGENTS.md`, `CLAUDE.md`, `mise` | Pinned developer toolchains, architecture boundary rules, and single-command agent validation loops (`make check`). | Templated |
-| **Spec-Driven Tree** | `docs/superpowers/{specs,plans}` + `docs/bruno` | Structured architecture specifications, task breakdown plans, and executable Bruno API request files. | Templated |
-| **Developer Ergonomics** | `mise`, `Makefile`, Docker Compose | Standardized toolchain management and one-command local dev environment. | Templated |
-| **Continuous Integration** | GitHub Actions (`templates/.github/workflows/ci.yml`) | CI workflow running backend & frontend tests, smoke tests, linting, and type checking on every push/PR. | Templated |
-| **Static Analysis** | `golangci-lint` (`.golangci.yml`) + `govulncheck` (`make vulncheck`) | Go linting and known-vulnerability scanning, alongside `tsc --noEmit` / ESLint on the frontend side (see `make check` in README.md). | Templated |
-| **Pre-commit & Secret Scanning** | `lefthook` + `gitleaks` (`.gitleaks.toml`) | Pre-commit hooks running formatting, lint, and secret scanning before a commit lands. | Templated |
+| **Health Probes** | `/healthz` & `/readyz` | Liveness and readiness endpoints with active database ping checks. | Done |
+| **Frontend Framework** | [Next.js](https://nextjs.org/) (App Router) | Modern React 19 + TypeScript frontend with Server Components and Mantine UI. | Done |
+| **Contract Sync & Reverse URLs** | `openapi-typescript` / `@hey-api/openapi-ts` + `openapi-fetch` | Auto-generated TypeScript types and type-safe reverse API URL client (`api.users.getById({ params: { id } })`), eliminating hardcoded URL strings. REST-tier client; GraphQL/gRPC tiers use their own codegen — see *API Protocol Layer* below. Not started: `frontend/lib/` is empty and no codegen dependency is installed. | **Pending** |
+| **Integration & API Testing** | `testcontainers-go`, Bruno | Ephemeral container testing for Postgres (`testcontainers-go`) and API smoke tests (`make smoke`) against the full `docs/bruno/` request collection. | Done |
+| **E2E Testing** | Playwright | Full-stack browser E2E testing. Not started: no Playwright dependency, config, or tests exist in `templates/frontend/`. | **Pending** |
+| **Agent Guardrails (Claude)** | `CLAUDE.md`, `mise` | Pinned developer toolchains, architecture boundary rules, and single-command agent validation loops (`make check`) for Claude Code. | Done |
+| **Agent Guardrails (Codex/other)** | `AGENTS.md` | Same guardrails as above, in the format other agent tools (Codex, etc.) read. Not started: no `AGENTS.md` exists in `templates/`. | **Pending** |
+| **Bruno Request Collection** | `docs/bruno/` | Executable Bruno API request files (happy path + error cases per endpoint), doubling as the project's smoke test via `make smoke`. Previously shipped at the wrong path (`templates/bruno/`, not `templates/docs/bruno/`), so every generated project's `make smoke` failed and its own `CLAUDE.md` pointed at a directory that didn't exist — fixed. | Done |
+| **Spec-Driven Docs Tree** | `docs/superpowers/{specs,plans}` | Structured architecture specifications and task breakdown plans, following this repo's own spec-driven workflow. Not started: no `docs/superpowers/` tree exists in `templates/` yet. | **Pending** |
+| **Developer Ergonomics** | `mise`, `Makefile`, Docker Compose | Standardized toolchain management and one-command local dev environment. | Done |
+| **Continuous Integration** | GitHub Actions (`templates/.github/workflows/ci.yml`) | CI workflow running backend & frontend tests, smoke tests, linting, and type checking on every push/PR. | Done |
+| **Static Analysis** | `golangci-lint` (`.golangci.yml`) + `govulncheck` (`make vulncheck`) | Go linting and known-vulnerability scanning, alongside `tsc --noEmit` / ESLint on the frontend side (see `make check` in README.md). | Done |
+| **Pre-commit & Secret Scanning** | `lefthook` + `gitleaks` (`.gitleaks.toml`) | Pre-commit hooks running formatting, lint, and secret scanning before a commit lands. | Done |
+| **Scaffolding CLI — init** | `cmd/scaffold`, `gonext init` | Generates a new project from `templates/`: prompts for a slug, copies + substitutes the template tree, runs `go mod init`/`tidy` and `pnpm install`, and best-effort bootstraps Postgres. Verified byte-for-byte via the golden-snapshot test (`cmd/scaffold/copy_golden_test.go`). Does not yet implement the full feature-pack selection prompt flow in *Scaffolding CLI Design Concept* below — today it only prompts for project name/path. | Done |
+| **Scaffolding CLI — add & dev-loop generators** | `gonext add`, `gonext generate *`, `gonext doctor` (*CLI Commands* below) | Retrofitting a feature pack post-init, and the repeated day-to-day generators (migration, resource, worker, page, wire refresh, doctor). None of these subcommands exist yet — `cmd/scaffold` only implements `init`. | **Pending** |
 | **Security Baseline** | Echo security-headers middleware, CORS config, baseline rate limiter | Security headers middleware, CORS configuration, and an in-process rate-limiting baseline applied to every generated project regardless of feature packs selected (distinct from Feature Pack D's distributed/Redis-backed limiter — see README.md). | **Pending** |
 | **Frontend-Backend Integration** | Typed API client + data-fetching layer | Typed frontend API client wired into a data-fetching layer, with environment-based API base URL handling across dev/CI/prod. | **Pending** |
 | **Production Containerization** | Multi-stage `Dockerfile`s (backend + frontend) | Production-grade multi-stage Docker builds for backend and frontend, with `make` targets and CI updated to build/run via Docker instead of host toolchains. Open question: whether `mise`-managed toolchains are still needed inside the image or can be dropped for a leaner runtime stage. Feeds directly into the Deployment Target feature pack (README.md), which selects the deploy target on top of these images. | **Pending** |
@@ -76,7 +88,7 @@ Scaffolding CLI prompts for this (see *Scaffolding CLI Design Concept* below) as
 
 ## Scaffolding CLI Design Concept
 
-**Status: Pending** — `cmd/scaffold` does not exist yet; this section is planned, not implemented.
+**Status: Partially done** — see *Scaffolding CLI — init* and *Scaffolding CLI — add & dev-loop generators* in *Core Foundations* above. `cmd/scaffold` exists and `gonext init` generates a project, but the interactive feature-pack selection flow below (background worker, email, blob storage, etc.) isn't implemented — today's `init` only prompts for a project name/path.
 
 When generating a new repository from this template, the scaffolding tool (`cmd/scaffold` or `init-project.sh`) executes the following steps:
 
@@ -164,9 +176,9 @@ Identified by comparing this roadmap against **create-t3-app**, **Buffalo** (gob
 
 ## Prioritized Next Steps
 
-1. **Build the actual CLI** (`cmd/scaffold`, *Scaffolding CLI Design Concept* + *CLI Commands* above) — the literal product deliverable, built first because it's also the only way the `Templated` rows in *Core Foundations* become real: the CLI is what actually generates a project from this code, which is what forces the SaaS-specific assumptions out of it and lets it be tested as a template's output rather than as the original app.
-2. **Harden the microkernel** — in dependency order: Backend Live-Reload → Security Baseline → Auth Foundation → Auth Provider Abstraction → Frontend-Backend Integration (all in *Core Foundations* above). Small and mostly self-contained, except the two Auth items, which come before Frontend-Backend Integration since more code will accrete on top of them (mechanism first, then swappability).
+1. **Core Foundations** — see the priority order under *Core Foundations* above for the agreed sequence of what's still `Pending`.
+2. **Finish the CLI's dev-loop** — `gonext add` + the `gonext generate *`/`doctor` commands (*Scaffolding CLI — add & dev-loop generators*, *Core Foundations* above) — `init` alone only proves the template can be generated once; these are what make the CLI keep paying for itself day to day.
 3. **Ship the deploy story** — Production Containerization (above) → Deployment Target feature pack (README.md), in that order since the pack needs the images to exist first. This closes what was the single largest functional gap.
-4. **API Protocol Layer alternates** (above) — REST is the `Templated` default and needs no new design; GraphQL/gRPC engines are additive, layered on top of the CLI and microkernel work above.
+4. **API Protocol Layer alternates** (above) — REST is the default and needs no new design; GraphQL/gRPC engines are additive, layered on top of the CLI and microkernel work above.
 5. **Formalize the remaining Feature Packs** (A, B, C, D, E, F, G, H — README.md) through the CLI, one at a time — lower design risk since the technology choices are already made.
 6. **Deferred gaps** (above) — infra-as-code/preview environments, open plugin system, live architecture visibility. No committed design yet.
