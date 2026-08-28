@@ -13,6 +13,12 @@ const projectNameToken = "[PROJECT-NAME]"
 // whether a file is binary, matching the heuristic Git itself uses.
 const binarySniffLen = 8192
 
+// generatedFileMode is the permission mode every file Copy writes
+// gets, regardless of the source's mode. embed.FS always reports its
+// entries as read-only (0444), and propagating that mode verbatim
+// would make every file in a generated project unwritable.
+const generatedFileMode = 0o644
+
 // Copy walks the tree rooted at root within fsys and writes every
 // file to dest. Text files have every occurrence of the
 // [PROJECT-NAME] token replaced with slug; files detected as binary
@@ -45,11 +51,6 @@ func Copy(fsys fs.FS, root, dest, slug string) error {
 			return err
 		}
 
-		info, err := d.Info()
-		if err != nil {
-			return err
-		}
-
 		if !isBinary(data) {
 			data = bytes.ReplaceAll(data, []byte(projectNameToken), []byte(slug))
 		}
@@ -57,7 +58,7 @@ func Copy(fsys fs.FS, root, dest, slug string) error {
 		if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
 			return err
 		}
-		return os.WriteFile(target, data, info.Mode().Perm())
+		return os.WriteFile(target, data, generatedFileMode)
 	})
 }
 
