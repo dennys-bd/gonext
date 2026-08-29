@@ -1,0 +1,28 @@
+meta {
+  name: Logout
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{baseUrl}}/users/logout
+  body: none
+  auth: none
+}
+
+headers {
+  Cookie: {{sessionCookie}}
+}
+
+assert {
+  res.status: eq 204
+}
+
+tests {
+  test("clears the session cookie", function () {
+    const raw = res.getHeader("set-cookie");
+    const header = Array.isArray(raw) ? raw[0] : raw;
+    expect(header).to.be.a("string").and.include("session=");
+    expect(header.toLowerCase()).to.include("max-age=0");
+  });
+}

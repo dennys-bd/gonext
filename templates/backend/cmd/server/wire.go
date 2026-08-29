@@ -12,6 +12,7 @@ import (
 	"[PROJECT-NAME]/backend/internal/logging"
 	"[PROJECT-NAME]/backend/internal/presentation/api"
 	"[PROJECT-NAME]/backend/tracks"
+	"[PROJECT-NAME]/backend/users"
 )
 
 // InitializeApp builds the full dependency graph — config, logger, DB
@@ -31,6 +32,7 @@ func InitializeApp(ctx context.Context) (*App, func(), error) {
 		api.ProvideHealthzRegistration,
 		api.ProvideReadyzRegistration,
 		tracks.ProvideRegistration,
+		users.ProvideRegistration,
 		NewApp,
 	)
 	return nil, nil, nil

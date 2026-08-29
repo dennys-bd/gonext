@@ -8,7 +8,7 @@ This document tracks implementation status, open design questions, and prioritiz
 
 **Priority order for what's still `Pending` below:**
 
-1. **Authentication & RBAC → Auth Foundation → Auth Provider Abstraction** — internally ordered, each depends on the one before it.
+1. **Auth Foundation → Auth Provider Abstraction** — internally ordered, each depends on the one before it. Both are now unblocked: Authentication & RBAC landed the `users/` track and the `SessionIssuer` port they consume.
 2. **Frontend-Backend Integration** — depends on Auth Foundation existing first, to carry identity through the typed client.
 3. **Scaffolding CLI — add & dev-loop generators**, **Backend Live-Reload** — CLI/dev-loop completeness, independent of Auth.
 4. **Contract Sync & Reverse URLs**, **E2E Testing** (Playwright) — frontend/testing completeness, independent of Auth.
@@ -23,8 +23,8 @@ This document tracks implementation status, open design questions, and prioritiz
 | **Logging & Correlation** | Standard `log/slog` | Structured JSON logging with request correlation ID injection (`X-Request-ID`). | Done |
 | **Database Layer** | PostgreSQL + `pgxpool` + [Bun](https://bun.uptrace.dev/) ORM | `pgxpool`-backed connection pool wrapped as a `database/sql` handle for Bun, giving struct-tag-mapped queries (`NewSelect`/`NewInsert`/etc.) with Postgres-aware pooling underneath (`templates/backend/internal/database/database.go`). | Done |
 | **Schema Migrations** | Bun's own `migrate.NewMigrations()` | Hand-written Postgres schema migrations registered with Bun's migrator, applied only via `backend/cmd/migrate` (`templates/backend/internal/database/migrations/`). Not `goose`/`golang-migrate` — earlier drafts of this table named the wrong tool. | Done |
-| **Authentication & RBAC** | Argon2id + Sessions/JWT + Role Middleware | Built-in authentication (secure `HttpOnly` cookies / JWT), password hashing (Argon2id), password reset, and role permissions. Not started: no session, password, or user-model code exists anywhere in `templates/` yet, despite earlier drafts of this table marking it done. | **Pending** |
-| **Auth Foundation** | Auth middleware + identity context injection | Authentication middleware hook that runs on every Huma-routed request and injects the authenticated user's identity into the handler's context, so handlers can read "current user" without re-deriving it from the raw session/JWT each time. Distinct from Auth Provider Abstraction below (this is the wiring mechanism; that is the swappable provider). Blocked on Authentication & RBAC above — there is no session/JWT layer yet to wire into request context. | **Pending** |
+| **Authentication & RBAC** | Argon2id + opaque cookie sessions + role/permission data | The `users/` track (`templates/backend/users/`): accounts, Argon2id password hashing, opaque `HttpOnly` cookie sessions stored as SHA-256 digests (`SessionIssuer`), email confirmation, password reset, and `Identity.HasRole`/`HasPermission` over a `role_permissions` join resolved in the same query that validates the session. Seven endpoints under `/users`. Registration rejects a taken email with `409` (uniqueness enforced by the DB constraint, so concurrent registrations cannot both win); `POST /users/password-reset` stays enumeration-safe. Ships a no-op `Notifier` (real mail is the Transactional Email pack's job). JWT/mobile sessions are deliberately out of scope — `SessionIssuer` is shaped so one can satisfy it later. | Done |
+| **Auth Foundation** | Auth middleware + identity context injection | Authentication middleware hook that runs on every Huma-routed request and injects the authenticated user's identity into the handler's context, so handlers can read "current user" without re-deriving it from the raw session/JWT each time. Distinct from Auth Provider Abstraction below (this is the wiring mechanism; that is the swappable provider). Unblocked by Authentication & RBAC above, which landed the `users/domain.SessionIssuer` port and `Identity` this middleware would resolve and inject; `GET /users/me` currently does that inline, which is the code this item generalises. | **Pending** |
 | **Auth Provider Abstraction** | Swappable provider interface (Clerk / Supabase / Auth0 adapters) | A provider-abstraction interface around the core auth module so the homegrown Argon2id/session implementation stays the default, but a project can swap in a third-party auth provider without restructuring the auth layer. Core (not a Feature Pack) since every project's identity boundary should be swappable from day one, not bolted on later. | **Pending** |
 | **Health Probes** | `/healthz` & `/readyz` | Liveness and readiness endpoints with active database ping checks. | Done |
 | **Frontend Framework** | [Next.js](https://nextjs.org/) (App Router) | Modern React 19 + TypeScript frontend with Server Components and Mantine UI. | Done |
@@ -182,3 +182,16 @@ Identified by comparing this roadmap against **create-t3-app**, **Buffalo** (gob
 4. **API Protocol Layer alternates** (above) — REST is the default and needs no new design; GraphQL/gRPC engines are additive, layered on top of the CLI and microkernel work above.
 5. **Formalize the remaining Feature Packs** (A, B, C, D, E, F, G, H — README.md) through the CLI, one at a time — lower design risk since the technology choices are already made.
 6. **Deferred gaps** (above) — infra-as-code/preview environments, open plugin system, live architecture visibility. No committed design yet.
+
+
+## Tech debts
+
+- cleanup job for users domain
+- allow more db connections
+- migration check on startup
+- rename tracks/
+- SMS comm
+- Oauth
+- Remove itself
+- Define mise usage
+- main.go

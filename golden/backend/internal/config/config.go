@@ -13,6 +13,7 @@ import (
 // Config holds the backend's runtime settings, populated from
 // environment variables by Load.
 type Config struct {
+	Env             string        `env:"ENV" envDefault:"prod" validate:"oneof=dev test stg prod"`
 	Port            int           `env:"PORT" envDefault:"8080" validate:"min=1,max=65535"`
 	LogLevel        string        `env:"LOG_LEVEL" envDefault:"info" validate:"oneof=debug info warn error"`
 	LogFormat       string        `env:"LOG_FORMAT" envDefault:"pretty" validate:"oneof=json pretty"`

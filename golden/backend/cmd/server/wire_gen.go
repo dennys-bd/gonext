@@ -13,6 +13,7 @@ import (
 	"golden-app/backend/internal/logging"
 	"golden-app/backend/internal/presentation/api"
 	"golden-app/backend/tracks"
+	"golden-app/backend/users"
 )
 
 // Injectors from wire.go:
@@ -43,7 +44,12 @@ func InitializeApp(ctx context.Context) (*App, func(), error) {
 		cleanup()
 		return nil, nil, err
 	}
-	app := NewApp(echo, logger, configConfig, healthzRegistered, readyzRegistered, registered)
+	usersRegistered, err := users.ProvideRegistration(humaAPI, db, configConfig, logger)
+	if err != nil {
+		cleanup()
+		return nil, nil, err
+	}
+	app := NewApp(echo, logger, configConfig, healthzRegistered, readyzRegistered, registered, usersRegistered)
 	return app, func() {
 		cleanup()
 	}, nil

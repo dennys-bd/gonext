@@ -12,6 +12,7 @@ import (
 	"golden-app/backend/internal/logging"
 	"golden-app/backend/internal/presentation/api"
 	"golden-app/backend/tracks"
+	"golden-app/backend/users"
 )
 
 // InitializeApp builds the full dependency graph — config, logger, DB
@@ -31,6 +32,7 @@ func InitializeApp(ctx context.Context) (*App, func(), error) {
 		api.ProvideHealthzRegistration,
 		api.ProvideReadyzRegistration,
 		tracks.ProvideRegistration,
+		users.ProvideRegistration,
 		NewApp,
 	)
 	return nil, nil, nil

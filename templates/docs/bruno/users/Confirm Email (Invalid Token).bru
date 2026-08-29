@@ -1,0 +1,27 @@
+meta {
+  name: Confirm Email (Invalid Token)
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/users/confirm-email
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "token": "not-a-real-token"
+  }
+}
+
+assert {
+  res.status: eq 400
+}
+
+tests {
+  test("error detail mentions the confirmation token is invalid", function () {
+    expect(res.getBody().detail).to.include("confirmation token is invalid");
+  });
+}

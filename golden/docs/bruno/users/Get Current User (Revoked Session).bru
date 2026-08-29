@@ -1,0 +1,25 @@
+meta {
+  name: Get Current User (Revoked Session)
+  type: http
+  seq: 11
+}
+
+get {
+  url: {{baseUrl}}/users/me
+  body: none
+  auth: none
+}
+
+headers {
+  Cookie: {{sessionCookie}}
+}
+
+assert {
+  res.status: eq 401
+}
+
+tests {
+  test("the session Logout revoked is no longer accepted", function () {
+    expect(res.getBody().detail).to.include("session is invalid");
+  });
+}

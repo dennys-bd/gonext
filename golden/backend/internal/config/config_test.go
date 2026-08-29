@@ -26,12 +26,15 @@ func unsetEnv(t *testing.T, keys ...string) {
 }
 
 func TestLoad_Defaults(t *testing.T) {
-	unsetEnv(t, "PORT", "LOG_LEVEL", "LOG_FORMAT", "SHUTDOWN_TIMEOUT")
+	unsetEnv(t, "ENV", "PORT", "LOG_LEVEL", "LOG_FORMAT", "SHUTDOWN_TIMEOUT")
 	t.Setenv("DATABASE_URL", testDatabaseURL)
 
 	cfg, err := Load()
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.Env != "prod" {
+		t.Errorf("expected default Env prod, got %q", cfg.Env)
 	}
 	if cfg.Port != 8080 {
 		t.Errorf("expected default Port 8080, got %d", cfg.Port)
@@ -55,6 +58,7 @@ func TestLoad_ValidationErrors(t *testing.T) {
 		name string
 		env  map[string]string
 	}{
+		{"invalid env", map[string]string{"ENV": "staging"}},
 		{"invalid log level", map[string]string{"LOG_LEVEL": "verbose"}},
 		{"port below range", map[string]string{"PORT": "0"}},
 		{"port above range", map[string]string{"PORT": "70000"}},

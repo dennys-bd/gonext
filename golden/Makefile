@@ -1,11 +1,12 @@
 .PHONY: run build test vet tidy generate generate-check smoke lint vulncheck db-up db-down migrate-up migrate-create frontend-dev frontend-build frontend-test frontend-lint frontend-typecheck frontend-audit secrets-scan hooks-install
 
+ENV ?= dev
 PORT ?= 8080
 DATABASE_URL ?= postgres://app:app@localhost:5432/app?sslmode=disable
 TEST_DATABASE_URL ?= postgres://app:app@localhost:5432/app_test?sslmode=disable
 
 run: ## Run the backend server on $PORT (default 8080)
-	DATABASE_URL=$(DATABASE_URL) go run ./backend/cmd/server
+	ENV=$(ENV) DATABASE_URL=$(DATABASE_URL) go run ./backend/cmd/server
 
 build: ## Build all backend packages
 	mise exec -- go build ./...
@@ -56,7 +57,7 @@ smoke: ## Migrate a local Postgres, build/run the server, run the Bruno collecti
 	DATABASE_URL=$(DATABASE_URL) mise exec -- go run ./backend/cmd/migrate up && \
 	lsof -ti tcp:$(PORT) | xargs -r kill 2>/dev/null; \
 	go build -o /tmp/backend-smoke-server ./backend/cmd/server || exit 1; \
-	PORT=$(PORT) DATABASE_URL=$(DATABASE_URL) /tmp/backend-smoke-server & \
+	ENV=$(ENV) PORT=$(PORT) DATABASE_URL=$(DATABASE_URL) /tmp/backend-smoke-server & \
 	SERVER_PID=$$!; \
 	trap 'kill $$SERVER_PID 2>/dev/null; rm -f /tmp/backend-smoke-server; docker compose down' EXIT; \
 	sleep 1; \
