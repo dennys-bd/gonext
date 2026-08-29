@@ -1,0 +1,28 @@
+meta {
+  name: Register (Email Taken)
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/users/register
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "{{userEmail}}",
+    "password": "{{userPassword}}"
+  }
+}
+
+assert {
+  res.status: eq 409
+}
+
+tests {
+  test("re-registering the address from Register is rejected", function () {
+    expect(res.getBody().detail).to.include("email already registered");
+  });
+}

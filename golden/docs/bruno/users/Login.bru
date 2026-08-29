@@ -1,0 +1,49 @@
+meta {
+  name: Login
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/users/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "{{userEmail}}",
+    "password": "{{userPassword}}"
+  }
+}
+
+assert {
+  res.status: eq 200
+}
+
+tests {
+  test("returns the confirmed user", function () {
+    const body = res.getBody();
+    expect(body.id).to.be.a("string").and.not.empty;
+    expect(body.email).to.equal(bru.getVar("userEmail"));
+    expect(body.role).to.equal("user");
+    expect(body.permissions).to.be.an("array").that.is.empty;
+    expect(body.emailVerified).to.equal(true);
+  });
+
+  test("sets an HttpOnly session cookie", function () {
+    const raw = res.getHeader("set-cookie");
+    const header = Array.isArray(raw) ? raw[0] : raw;
+    expect(header).to.be.a("string").and.include("session=");
+    expect(header.toLowerCase()).to.include("httponly");
+    expect(header.toLowerCase()).to.include("samesite=lax");
+  });
+}
+
+script:post-response {
+  if (res.status === 200) {
+    const raw = res.getHeader("set-cookie");
+    const header = Array.isArray(raw) ? raw[0] : raw;
+    bru.setVar("sessionCookie", header.split(";")[0]);
+  }
+}

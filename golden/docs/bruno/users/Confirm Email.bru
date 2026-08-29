@@ -1,0 +1,27 @@
+meta {
+  name: Confirm Email
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/users/confirm-email
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "token": "{{confirmToken}}"
+  }
+}
+
+assert {
+  res.status: eq 200
+}
+
+tests {
+  test("confirms the email registered by Register", function () {
+    expect(res.getBody().message).to.include("confirmed");
+  });
+}

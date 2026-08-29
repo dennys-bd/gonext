@@ -1,0 +1,21 @@
+meta {
+  name: Get Current User (No Session)
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/users/me
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 401
+}
+
+tests {
+  test("error detail mentions the session is invalid", function () {
+    expect(res.getBody().detail).to.include("session is invalid");
+  });
+}

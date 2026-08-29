@@ -9,6 +9,7 @@ import (
 	"[PROJECT-NAME]/backend/internal/config"
 	"[PROJECT-NAME]/backend/internal/presentation/api"
 	"[PROJECT-NAME]/backend/tracks"
+	"[PROJECT-NAME]/backend/users"
 )
 
 // App bundles what main needs once wire has built and registered
@@ -22,9 +23,9 @@ type App struct {
 }
 
 // NewApp assembles App. Its marker parameters (HealthzRegistered,
-// ReadyzRegistered, tracks.Registered) aren't read; depending on them
-// is what forces wire to run every registration before InitializeApp
-// returns.
+// ReadyzRegistered, tracks.Registered, users.Registered) aren't read;
+// depending on them is what forces wire to run every registration
+// before InitializeApp returns.
 func NewApp(
 	e *echo.Echo,
 	logger *slog.Logger,
@@ -32,6 +33,7 @@ func NewApp(
 	_ api.HealthzRegistered,
 	_ api.ReadyzRegistered,
 	_ tracks.Registered,
+	_ users.Registered,
 ) *App {
 	return &App{
 		Echo:            e,

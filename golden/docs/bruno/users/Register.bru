@@ -1,0 +1,44 @@
+meta {
+  name: Register
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/users/register
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "{{userEmail}}",
+    "password": "{{userPassword}}"
+  }
+}
+
+assert {
+  res.status: eq 202
+}
+
+tests {
+  test("returns the generic accepted message and a dev confirmation token", function () {
+    const body = res.getBody();
+    expect(body.message).to.be.a("string").and.not.empty;
+    expect(body.token).to.be.a("string").and.not.empty;
+  });
+}
+
+script:pre-request {
+  // A fresh email per run: the smoke database persists between runs,
+  // and a repeated email would take the already-registered branch.
+  bru.setVar("userEmail", `smoke-${Date.now()}-${Math.floor(Math.random() * 100000)}@example.com`);
+  bru.setVar("userPassword", "correct horse battery staple");
+  bru.setVar("userNewPassword", "an entirely different password");
+}
+
+script:post-response {
+  if (res.status === 202) {
+    bru.setVar("confirmToken", res.body.token);
+  }
+}
