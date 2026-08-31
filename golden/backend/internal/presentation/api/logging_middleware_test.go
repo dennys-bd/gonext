@@ -2,19 +2,30 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/dennys-bd/gonext/auth"
 	"github.com/labstack/echo/v4"
 )
+
+// noopResolver stands in for an identity provider on the endpoints
+// these tests exercise. /healthz declares no security requirement,
+// so the auth middleware never reaches a resolver here.
+type noopResolver struct{}
+
+func (noopResolver) Resolve(context.Context, string) (auth.Identity, error) {
+	return auth.Identity{}, auth.ErrUnauthenticated
+}
 
 func TestServer_RequestID_EchoedFromRequest(t *testing.T) {
 	var buf bytes.Buffer
 	logger := slog.New(slog.NewJSONHandler(&buf, nil))
-	e, humaAPI := NewServer(logger)
+	e, humaAPI := NewServer(logger, noopResolver{}, ProvideAuthConfig())
 	RegisterHealthz(humaAPI)
 
 	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
@@ -31,7 +42,7 @@ func TestServer_RequestID_EchoedFromRequest(t *testing.T) {
 func TestServer_RequestID_GeneratedWhenAbsent(t *testing.T) {
 	var buf bytes.Buffer
 	logger := slog.New(slog.NewJSONHandler(&buf, nil))
-	e, humaAPI := NewServer(logger)
+	e, humaAPI := NewServer(logger, noopResolver{}, ProvideAuthConfig())
 	RegisterHealthz(humaAPI)
 
 	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
@@ -47,7 +58,7 @@ func TestServer_RequestID_GeneratedWhenAbsent(t *testing.T) {
 func TestServer_LoggingMiddleware_LogsRequestLine(t *testing.T) {
 	var buf bytes.Buffer
 	logger := slog.New(slog.NewJSONHandler(&buf, nil))
-	e, humaAPI := NewServer(logger)
+	e, humaAPI := NewServer(logger, noopResolver{}, ProvideAuthConfig())
 	RegisterHealthz(humaAPI)
 
 	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)

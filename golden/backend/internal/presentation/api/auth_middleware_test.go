@@ -14,6 +14,7 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/humatest"
 	"github.com/dennys-bd/gonext/auth"
+	"github.com/labstack/echo/v4"
 
 	"golden-app/backend/internal/presentation/api"
 	"golden-app/backend/internal/presentation/httpx"
@@ -209,5 +210,25 @@ func TestAuthMiddleware(t *testing.T) {
 				t.Errorf("expected body to contain %s, got %s", wantFragment, body)
 			}
 		})
+	}
+}
+
+// The security scheme must be in the published document: it is what
+// tells the generated TypeScript client and the Bruno collection
+// which calls need a session.
+func TestNewHumaAPI_PublishesSecurityScheme(t *testing.T) {
+	humaAPI := api.NewHumaAPI(
+		echo.New(),
+		fakeResolver{token: "valid"},
+		api.ProvideAuthConfig(),
+		slog.New(slog.NewTextHandler(io.Discard, nil)),
+	)
+
+	scheme, ok := humaAPI.OpenAPI().Components.SecuritySchemes[auth.SchemeName]
+	if !ok {
+		t.Fatalf("expected a %q security scheme in the OpenAPI document", auth.SchemeName)
+	}
+	if scheme.Type != "apiKey" || scheme.In != "cookie" || scheme.Name != auth.DefaultCookieName {
+		t.Errorf("unexpected scheme: %+v", scheme)
 	}
 }
