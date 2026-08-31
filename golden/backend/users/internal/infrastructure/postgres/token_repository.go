@@ -9,6 +9,7 @@ import (
 
 	"github.com/uptrace/bun"
 
+	"golden-app/backend/internal/database"
 	"golden-app/backend/users/domain"
 )
 
@@ -86,5 +87,5 @@ func (r *TokenRepository) MarkUsed(ctx context.Context, id string, usedAt time.T
 	if err != nil {
 		return fmt.Errorf("marking token used: %w", err)
 	}
-	return requireOneRow(res, domain.ErrTokenNotFound)
+	return database.RequireOneRow(res, domain.ErrTokenNotFound)
 }

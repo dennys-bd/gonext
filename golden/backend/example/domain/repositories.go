@@ -6,7 +6,7 @@ import (
 )
 
 // ErrStubNotFound is returned when a Stub cannot be found by id.
-var ErrStubNotFound = errors.New("tracks: stub not found")
+var ErrStubNotFound = errors.New("example: stub not found")
 
 // StubRepository persists and retrieves Stubs.
 type StubRepository interface {

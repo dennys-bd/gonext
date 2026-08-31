@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"golden-app/backend/internal/database/dbtest"
-	"golden-app/backend/tracks/domain"
-	"golden-app/backend/tracks/internal/infrastructure/postgres"
+	"golden-app/backend/example/domain"
+	"golden-app/backend/example/internal/infrastructure/postgres"
 )
 
 func TestStubRepository_CreateAndGet(t *testing.T) {

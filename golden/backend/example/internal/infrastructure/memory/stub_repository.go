@@ -1,4 +1,4 @@
-// Package memory provides an in-memory adapter for the tracks domain's
+// Package memory provides an in-memory adapter for the example domain's
 // repository ports.
 package memory
 
@@ -6,7 +6,7 @@ import (
 	"context"
 	"sync"
 
-	"golden-app/backend/tracks/domain"
+	"golden-app/backend/example/domain"
 )
 
 var _ domain.StubRepository = (*StubRepository)(nil)

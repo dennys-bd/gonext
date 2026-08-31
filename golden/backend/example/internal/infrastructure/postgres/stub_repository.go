@@ -1,4 +1,4 @@
-// Package postgres provides the tracks domain's Postgres-backed
+// Package postgres provides the example domain's Postgres-backed
 // adapter for its repository ports.
 package postgres
 
@@ -11,7 +11,7 @@ import (
 
 	"github.com/uptrace/bun"
 
-	"golden-app/backend/tracks/domain"
+	"golden-app/backend/example/domain"
 )
 
 var _ domain.StubRepository = (*StubRepository)(nil)
@@ -29,7 +29,7 @@ func NewStubRepository(db bun.IDB) *StubRepository {
 }
 
 // stubRow is Bun's row-mapping struct for the stubs table. It stays
-// in this package — tracks/domain.Stub has no infrastructure imports
+// in this package — example/domain.Stub has no infrastructure imports
 // or struct tags.
 type stubRow struct {
 	bun.BaseModel `bun:"table:stubs"`

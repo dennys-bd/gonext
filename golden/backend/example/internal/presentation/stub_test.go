@@ -7,8 +7,8 @@ import (
 
 	"github.com/danielgtaylor/huma/v2/humatest"
 
-	"golden-app/backend/tracks/internal/application"
-	"golden-app/backend/tracks/internal/infrastructure/memory"
+	"golden-app/backend/example/internal/application"
+	"golden-app/backend/example/internal/infrastructure/memory"
 )
 
 func newTestAPI(t *testing.T) humatest.TestAPI {

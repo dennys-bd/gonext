@@ -187,11 +187,11 @@ Identified by comparing this roadmap against **create-t3-app**, **Buffalo** (gob
 ## Tech debts
 
 - cleanup job for users domain
-- allow more db connections
+- allow more db backends
 - migration check on startup
 - SMS comm
 - Oauth
 - Remove itself
 - Define mise usage
 - snapshot testing
-- fastapi wire under the hood?
+- fastapi wire under the hood?****

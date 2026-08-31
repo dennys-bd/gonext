@@ -1,4 +1,4 @@
-// Package domain holds the tracks domain's public entities, value
+// Package domain holds the example domain's public entities, value
 // objects, domain errors, and repository ports. It depends on nothing
 // outside the standard library.
 package domain
@@ -9,9 +9,9 @@ import (
 )
 
 // ErrStubNameRequired is returned when constructing a Stub with an empty name.
-var ErrStubNameRequired = errors.New("tracks: stub name is required")
+var ErrStubNameRequired = errors.New("example: stub name is required")
 
-// Stub is the tracks domain's placeholder entity.
+// Stub is the example domain's placeholder entity.
 type Stub struct {
 	ID        string
 	Name      string

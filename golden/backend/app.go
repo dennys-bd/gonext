@@ -6,9 +6,9 @@ import (
 
 	"github.com/labstack/echo/v4"
 
+	"golden-app/backend/example"
 	"golden-app/backend/internal/config"
 	"golden-app/backend/internal/presentation/api"
-	"golden-app/backend/tracks"
 	"golden-app/backend/users"
 )
 
@@ -23,16 +23,16 @@ type App struct {
 }
 
 // NewApp assembles App. Its marker parameters (HealthzRegistered,
-// ReadyzRegistered, tracks.Registered, users.Registered) aren't read;
-// depending on them is what forces wire to run every registration
-// before InitializeApp returns.
+// ReadyzRegistered, example.Registered, users.Registered) aren't
+// read; depending on them is what forces wire to run every
+// registration before InitializeApp returns.
 func NewApp(
 	e *echo.Echo,
 	logger *slog.Logger,
 	cfg config.Config,
 	_ api.HealthzRegistered,
 	_ api.ReadyzRegistered,
-	_ tracks.Registered,
+	_ example.Registered,
 	_ users.Registered,
 ) *App {
 	return &App{
