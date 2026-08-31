@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/dennys-bd/gonext/auth"
+
 	"[PROJECT-NAME]/backend/users/domain"
 	"[PROJECT-NAME]/backend/users/internal/idgen"
 )
@@ -169,17 +171,17 @@ func (s *UserService) Logout(ctx context.Context, token string) error {
 
 // Me resolves a session token to its identity and the account behind
 // it, in the single query SessionIssuer.Validate performs.
-func (s *UserService) Me(ctx context.Context, token string) (domain.Identity, domain.User, error) {
+func (s *UserService) Me(ctx context.Context, token string) (auth.Identity, domain.User, error) {
 	if token == "" {
-		return domain.Identity{}, domain.User{}, domain.ErrSessionInvalid
+		return auth.Identity{}, domain.User{}, domain.ErrSessionInvalid
 	}
 
 	identity, user, err := s.issuer.Validate(ctx, token)
 	if err != nil {
 		if errors.Is(err, domain.ErrSessionInvalid) {
-			return domain.Identity{}, domain.User{}, err
+			return auth.Identity{}, domain.User{}, err
 		}
-		return domain.Identity{}, domain.User{}, fmt.Errorf("validating session: %w", err)
+		return auth.Identity{}, domain.User{}, fmt.Errorf("validating session: %w", err)
 	}
 	return identity, user, nil
 }

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/dennys-bd/gonext/auth"
 	"github.com/uptrace/bun"
 
 	"[PROJECT-NAME]/backend/users/domain"
@@ -80,7 +81,7 @@ func (i *SessionIssuer) Issue(ctx context.Context, userID string) (string, time.
 // user's record and the role's permissions come back from the same
 // query, so neither a HasPermission check nor rendering the account
 // costs another round-trip.
-func (i *SessionIssuer) Validate(ctx context.Context, token string) (domain.Identity, domain.User, error) {
+func (i *SessionIssuer) Validate(ctx context.Context, token string) (auth.Identity, domain.User, error) {
 	var rows []identityRow
 
 	err := i.db.NewRaw(`
@@ -99,10 +100,10 @@ func (i *SessionIssuer) Validate(ctx context.Context, token string) (domain.Iden
 		WHERE s.id = ? AND s.expires_at > ?
 	`, hashSessionToken(token), time.Now().UTC()).Scan(ctx, &rows)
 	if err != nil {
-		return domain.Identity{}, domain.User{}, fmt.Errorf("querying session: %w", err)
+		return auth.Identity{}, domain.User{}, fmt.Errorf("querying session: %w", err)
 	}
 	if len(rows) == 0 {
-		return domain.Identity{}, domain.User{}, domain.ErrSessionInvalid
+		return auth.Identity{}, domain.User{}, domain.ErrSessionInvalid
 	}
 
 	permissions := make([]string, 0, len(rows))
@@ -115,7 +116,7 @@ func (i *SessionIssuer) Validate(ctx context.Context, token string) (domain.Iden
 	// PasswordHash is deliberately not selected: nothing downstream of
 	// a session lookup needs it, so it never leaves the users table.
 	first := rows[0]
-	identity := domain.Identity{UserID: first.UserID, Role: first.Role, Permissions: permissions}
+	identity := auth.Identity{UserID: first.UserID, Role: first.Role, Permissions: permissions}
 	user := domain.User{
 		ID:              first.UserID,
 		Email:           first.Email,

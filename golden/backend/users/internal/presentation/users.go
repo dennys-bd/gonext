@@ -10,6 +10,7 @@ import (
 	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/dennys-bd/gonext/auth"
 
 	"golden-app/backend/users/domain"
 	"golden-app/backend/users/internal/application"
@@ -253,7 +254,7 @@ func toHTTPError(err error) (error, bool) {
 	}
 }
 
-func toUserBody(identity domain.Identity, user domain.User) userBody {
+func toUserBody(identity auth.Identity, user domain.User) userBody {
 	permissions := identity.Permissions
 	if permissions == nil {
 		permissions = []string{}
