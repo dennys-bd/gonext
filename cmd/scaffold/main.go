@@ -15,6 +15,8 @@ func main() {
 	switch os.Args[1] {
 	case "init":
 		os.Exit(runInit(os.Args[2:]))
+	case "migrate":
+		os.Exit(runMigrate(os.Args[2:]))
 	default:
 		usage()
 		os.Exit(1)
@@ -23,4 +25,5 @@ func main() {
 
 func usage() {
 	fmt.Fprintln(os.Stderr, "usage: gonext init <name> [path]")
+	fmt.Fprintln(os.Stderr, "       gonext migrate")
 }
