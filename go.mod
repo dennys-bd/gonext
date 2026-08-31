@@ -4,6 +4,7 @@ go 1.26.7
 
 require (
 	github.com/charmbracelet/huh v1.0.0
+	github.com/fsnotify/fsnotify v1.10.1
 	github.com/mattn/go-isatty v0.0.24
 )
 
