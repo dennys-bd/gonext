@@ -10,6 +10,7 @@ import (
 
 	gonext "github.com/dennys-bd/gonext"
 	xexec "github.com/dennys-bd/gonext/internal/exec"
+	"github.com/dennys-bd/gonext/internal/migrate"
 	"github.com/dennys-bd/gonext/internal/scaffold"
 )
 
@@ -126,7 +127,7 @@ func bootstrapDatabase(ctx context.Context, dest string) error {
 		return fmt.Errorf("waiting for database: %w", err)
 	}
 
-	if err := xexec.Run(ctx, dest, "go", "run", "./backend/cmd/migrate", "up"); err != nil {
+	if err := migrate.Apply(ctx, dest); err != nil {
 		return fmt.Errorf("running migration: %w", err)
 	}
 	return nil

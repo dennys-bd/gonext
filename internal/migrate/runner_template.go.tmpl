@@ -1,0 +1,50 @@
+// Command gonext-migrate-runner is a temporary file materialized by
+// `gonext migrate` to apply pending Postgres migrations against the
+// generated project it runs from. It is deleted immediately after
+// running and should never be committed.
+package main
+
+import (
+	"context"
+	"fmt"
+	"os"
+
+	"github.com/uptrace/bun/migrate"
+
+	"[MODULE-PATH]/backend/internal/config"
+	"[MODULE-PATH]/backend/internal/database"
+	"[MODULE-PATH]/backend/internal/database/migrations"
+)
+
+func main() {
+	cfg, err := config.Load()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "config: %v\n", err)
+		os.Exit(1)
+	}
+
+	ctx := context.Background()
+	db, err := database.Connect(ctx, cfg.DatabaseURL)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "connecting to database: %v\n", err)
+		os.Exit(1)
+	}
+	defer db.Close()
+
+	migrator := migrate.NewMigrator(db, migrations.Migrations)
+	if err := migrator.Init(ctx); err != nil {
+		fmt.Fprintf(os.Stderr, "initializing migration tables: %v\n", err)
+		os.Exit(1)
+	}
+
+	group, err := migrator.Migrate(ctx)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "running migrations: %v\n", err)
+		os.Exit(1)
+	}
+	if group.IsZero() {
+		fmt.Println("no new migrations to run")
+		return
+	}
+	fmt.Printf("migrated to %s\n", group)
+}

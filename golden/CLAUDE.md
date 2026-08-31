@@ -7,7 +7,7 @@ Monorepo root. See `README.md` for the app layout and `docs/superpowers/specs/` 
 Every HTTP endpoint exposed by `backend/` must have a matching Bruno request file under `docs/bruno/`, kept in sync whenever an endpoint is added, changed, or removed:
 
 - Cross-cutting endpoints (not owned by any domain, e.g. `/healthz`) live directly under `docs/bruno/` (see `Healthz.bru`).
-- Domain endpoints live under `docs/bruno/<Domain>/` matching the domain's folder name in `backend/` (see `Stubs/` for the `tracks` domain's `/stubs` endpoints).
+- Domain endpoints live under `docs/bruno/<Domain>/` matching the domain's folder name in `backend/` (see `example/` for the `example` domain's `/stubs` endpoints).
 - Use `{{baseUrl}}` (defined in `docs/bruno/environments/Local.bru`) instead of hardcoding a host.
 - Add an `assert { res.status: eq <code> }` block for the expected status code.
 - Add a `tests { test("...", function () { expect(...) }) }` block for meaningful response-body checks (e.g. a created resource's id/fields, or an error's `detail` message) — this is what makes the collection double as the project's smoke test.

@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/uptrace/bun"
 
+	"[PROJECT-NAME]/backend/internal/database"
 	"[PROJECT-NAME]/backend/users/domain"
 )
 
@@ -64,21 +64,12 @@ func (r *UserRepository) Create(ctx context.Context, u domain.User) error {
 		UpdatedAt:       u.UpdatedAt,
 	}
 	if _, err := r.db.NewInsert().Model(row).Exec(ctx); err != nil {
-		if isUniqueViolation(err) {
+		if database.IsUniqueViolation(err) {
 			return domain.ErrEmailTaken
 		}
 		return fmt.Errorf("creating user: %w", err)
 	}
 	return nil
-}
-
-// isUniqueViolation reports whether err is Postgres' unique_violation
-// (SQLSTATE 23505). Letting the insert fail on the constraint is what
-// makes registration race-proof: unlike a prior existence check, two
-// concurrent inserts of the same email cannot both win.
-func isUniqueViolation(err error) bool {
-	var pgErr *pgconn.PgError
-	return errors.As(err, &pgErr) && pgErr.Code == "23505"
 }
 
 // GetByID retrieves the User with the given id, or domain.ErrUserNotFound.
@@ -113,7 +104,7 @@ func (r *UserRepository) UpdatePasswordHash(ctx context.Context, id, passwordHas
 	if err != nil {
 		return fmt.Errorf("updating password hash: %w", err)
 	}
-	return requireOneRow(res, domain.ErrUserNotFound)
+	return database.RequireOneRow(res, domain.ErrUserNotFound)
 }
 
 // MarkEmailVerified records verifiedAt as the confirmation time for id.
@@ -127,18 +118,5 @@ func (r *UserRepository) MarkEmailVerified(ctx context.Context, id string, verif
 	if err != nil {
 		return fmt.Errorf("marking email verified: %w", err)
 	}
-	return requireOneRow(res, domain.ErrUserNotFound)
-}
-
-// requireOneRow turns an update that matched nothing into notFound,
-// so a caller can tell "no such row" from "row left unchanged".
-func requireOneRow(res sql.Result, notFound error) error {
-	affected, err := res.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("reading affected rows: %w", err)
-	}
-	if affected == 0 {
-		return notFound
-	}
-	return nil
+	return database.RequireOneRow(res, domain.ErrUserNotFound)
 }

@@ -16,7 +16,7 @@ Monorepo root.
 
 ```bash
 cd backend
-go run ./cmd/server
+go run .
 ```
 
 In another terminal:

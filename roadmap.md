@@ -18,11 +18,11 @@ This document tracks implementation status, open design questions, and prioritiz
 | Component | Technology | Description | Status |
 |---|---|---|---|
 | **Backend Framework** | [Echo](https://echo.labstack.com/) + [Huma v2](https://huma.rocks/) | Fast Go HTTP router with automatic OpenAPI 3.1 schema generation and runtime validation. Default engine for the REST tier of the API Protocol Layer — see *API Protocol Layer* below for GraphQL/gRPC alternatives. | Done |
-| **Server Lifecycle** | `signal.NotifyContext` | Graceful shutdown with connection draining on SIGTERM/SIGINT (`templates/backend/cmd/server/main.go`). | Done |
+| **Server Lifecycle** | `signal.NotifyContext` | Graceful shutdown with connection draining on SIGTERM/SIGINT (`templates/backend/main.go`). | Done |
 | **Configuration** | Typed Config + `mise` | Centralized type-safe environment configuration with `.env.example` validation. | Done |
 | **Logging & Correlation** | Standard `log/slog` | Structured JSON logging with request correlation ID injection (`X-Request-ID`). | Done |
 | **Database Layer** | PostgreSQL + `pgxpool` + [Bun](https://bun.uptrace.dev/) ORM | `pgxpool`-backed connection pool wrapped as a `database/sql` handle for Bun, giving struct-tag-mapped queries (`NewSelect`/`NewInsert`/etc.) with Postgres-aware pooling underneath (`templates/backend/internal/database/database.go`). | Done |
-| **Schema Migrations** | Bun's own `migrate.NewMigrations()` | Hand-written Postgres schema migrations registered with Bun's migrator, applied only via `backend/cmd/migrate` (`templates/backend/internal/database/migrations/`). Not `goose`/`golang-migrate` — earlier drafts of this table named the wrong tool. | Done |
+| **Schema Migrations** | Bun's own `migrate.NewMigrations()` | Hand-written Postgres schema migrations registered with Bun's migrator (`templates/backend/internal/database/migrations/`), applied via `gonext migrate` — a CLI-native subcommand (`internal/migrate`) that materializes a temp runner against the generated project rather than vendoring a `backend/cmd/migrate` binary into every project. Not `goose`/`golang-migrate` — earlier drafts of this table named the wrong tool. | Done |
 | **Authentication & RBAC** | Argon2id + opaque cookie sessions + role/permission data | The `users/` track (`templates/backend/users/`): accounts, Argon2id password hashing, opaque `HttpOnly` cookie sessions stored as SHA-256 digests (`SessionIssuer`), email confirmation, password reset, and `Identity.HasRole`/`HasPermission` over a `role_permissions` join resolved in the same query that validates the session. Seven endpoints under `/users`. Registration rejects a taken email with `409` (uniqueness enforced by the DB constraint, so concurrent registrations cannot both win); `POST /users/password-reset` stays enumeration-safe. Ships a no-op `Notifier` (real mail is the Transactional Email pack's job). JWT/mobile sessions are deliberately out of scope — `SessionIssuer` is shaped so one can satisfy it later. | Done |
 | **Auth Foundation** | Auth middleware + identity context injection | Authentication middleware hook that runs on every Huma-routed request and injects the authenticated user's identity into the handler's context, so handlers can read "current user" without re-deriving it from the raw session/JWT each time. Distinct from Auth Provider Abstraction below (this is the wiring mechanism; that is the swappable provider). Unblocked by Authentication & RBAC above, which landed the `users/domain.SessionIssuer` port and `Identity` this middleware would resolve and inject; `GET /users/me` currently does that inline, which is the code this item generalises. | **Pending** |
 | **Auth Provider Abstraction** | Swappable provider interface (Clerk / Supabase / Auth0 adapters) | A provider-abstraction interface around the core auth module so the homegrown Argon2id/session implementation stays the default, but a project can swap in a third-party auth provider without restructuring the auth layer. Core (not a Feature Pack) since every project's identity boundary should be swappable from day one, not bolted on later. | **Pending** |
@@ -151,7 +151,7 @@ Dev-loop commands should be thin wrappers around existing `make` targets where o
 
 | Command | Wraps / Extends | Purpose |
 |---|---|---|
-| `gonext generate migration <name>` | `make migrate-create NAME=<name>` | Scaffold a new timestamped SQL migration file. |
+| `gonext generate migration <name>` | new — no `make` target to wrap; the old `backend/cmd/migrate create` was removed when `gonext migrate` replaced its `up` counterpart, so this command has no `create` equivalent yet | Scaffold a new timestamped SQL migration file. |
 | `gonext generate resource <name>` | new — composes Bun models/queries, Huma, Bruno | Full CRUD slice in one shot: migration + Bun model/query file + Huma handler + route registration + `docs/bruno/<Domain>/` request files (happy path + error cases), per the Bruno convention in `CLAUDE.md`. |
 | `gonext generate worker <name>` | new (pack-gated) | New River/Machinery/Watermill job skeleton — only available if a background-worker pack was selected at init. |
 | `gonext generate page <name>` | new | Next.js route + matching typed API client call via the generated OpenAPI client. |
@@ -187,11 +187,11 @@ Identified by comparing this roadmap against **create-t3-app**, **Buffalo** (gob
 ## Tech debts
 
 - cleanup job for users domain
-- allow more db connections
+- allow more db backends
 - migration check on startup
-- rename tracks/
 - SMS comm
 - Oauth
 - Remove itself
 - Define mise usage
-- main.go
+- snapshot testing
+- fastapi wire under the hood?****
