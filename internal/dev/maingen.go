@@ -29,6 +29,16 @@ func RegenerateMain(fsys fs.FS, root, modulePath string) error {
 	data = bytes.ReplaceAll(data, []byte(projectNameToken), []byte(modulePath))
 
 	dest := filepath.Join(root, "backend", "main.go")
+
+	// Skip the write when content is already up to date. gonext dev
+	// calls RegenerateMain before every build, including rebuilds the
+	// watcher itself triggered; backend/main.go is a watched .go file,
+	// so an unconditional rewrite here would touch its mtime on every
+	// single build and re-trigger another rebuild — an infinite loop.
+	if existing, err := os.ReadFile(dest); err == nil && bytes.Equal(existing, data) {
+		return nil
+	}
+
 	if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
 		return fmt.Errorf("creating %s: %w", filepath.Dir(dest), err)
 	}
