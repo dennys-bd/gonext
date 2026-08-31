@@ -1,5 +1,5 @@
-// Package application holds the tracks domain's use cases. Depends
-// only on tracks/domain — never imports infrastructure or presentation.
+// Package application holds the example domain's use cases. Depends
+// only on example/domain — never imports infrastructure or presentation.
 package application
 
 import (
@@ -8,10 +8,10 @@ import (
 	"encoding/hex"
 	"time"
 
-	"[PROJECT-NAME]/backend/tracks/domain"
+	"[PROJECT-NAME]/backend/example/domain"
 )
 
-// StubService implements the tracks domain's stub use cases.
+// StubService implements the example domain's stub use cases.
 type StubService struct {
 	repo domain.StubRepository
 }

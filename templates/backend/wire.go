@@ -7,18 +7,18 @@ import (
 
 	"github.com/google/wire"
 
+	"[PROJECT-NAME]/backend/example"
 	"[PROJECT-NAME]/backend/internal/config"
 	"[PROJECT-NAME]/backend/internal/database"
 	"[PROJECT-NAME]/backend/internal/logging"
 	"[PROJECT-NAME]/backend/internal/presentation/api"
-	"[PROJECT-NAME]/backend/tracks"
 	"[PROJECT-NAME]/backend/users"
 )
 
 // InitializeApp builds the full dependency graph — config, logger, DB
 // pool, HTTP server, and every domain's endpoint registration — and
 // returns the assembled App, a cleanup func (closing the DB pool),
-// and any error hit along the way. Run `wire ./backend/cmd/server/...`
+// and any error hit along the way. Run `wire ./backend/...`
 // (see `make generate`) to regenerate wire_gen.go after changing the
 // provider list below.
 func InitializeApp(ctx context.Context) (*App, func(), error) {
@@ -31,7 +31,7 @@ func InitializeApp(ctx context.Context) (*App, func(), error) {
 		api.NewHumaAPI,
 		api.ProvideHealthzRegistration,
 		api.ProvideReadyzRegistration,
-		tracks.ProvideRegistration,
+		example.ProvideRegistration,
 		users.ProvideRegistration,
 		NewApp,
 	)

@@ -1,18 +1,18 @@
-// Package tracks is the public facade for the tracks domain. Register
+// Package example is the public facade for the example domain. Register
 // is the only symbol other packages may call — everything else lives
-// under tracks/internal and is compiler-sealed.
-package tracks
+// under example/internal and is compiler-sealed.
+package example
 
 import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/uptrace/bun"
 
-	"[PROJECT-NAME]/backend/tracks/internal/application"
-	"[PROJECT-NAME]/backend/tracks/internal/infrastructure/postgres"
-	"[PROJECT-NAME]/backend/tracks/internal/presentation"
+	"[PROJECT-NAME]/backend/example/internal/application"
+	"[PROJECT-NAME]/backend/example/internal/infrastructure/postgres"
+	"[PROJECT-NAME]/backend/example/internal/presentation"
 )
 
-// Register wires up the tracks domain's dependencies and registers its
+// Register wires up the example domain's dependencies and registers its
 // HTTP endpoints on api, backed by db.
 func Register(api huma.API, db *bun.DB) error {
 	repo := postgres.NewStubRepository(db)

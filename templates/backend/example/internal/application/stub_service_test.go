@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"[PROJECT-NAME]/backend/tracks/domain"
-	"[PROJECT-NAME]/backend/tracks/internal/infrastructure/memory"
+	"[PROJECT-NAME]/backend/example/domain"
+	"[PROJECT-NAME]/backend/example/internal/infrastructure/memory"
 )
 
 func TestStubService_CreateAndGet(t *testing.T) {

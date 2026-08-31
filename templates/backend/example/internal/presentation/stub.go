@@ -1,4 +1,4 @@
-// Package presentation exposes the tracks domain's HTTP operations on
+// Package presentation exposes the example domain's HTTP operations on
 // a shared huma.API, translating domain errors into HTTP status codes.
 package presentation
 
@@ -10,8 +10,8 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"[PROJECT-NAME]/backend/tracks/domain"
-	"[PROJECT-NAME]/backend/tracks/internal/application"
+	"[PROJECT-NAME]/backend/example/domain"
+	"[PROJECT-NAME]/backend/example/internal/application"
 )
 
 type createStubInput struct {
@@ -40,7 +40,7 @@ func RegisterStub(api huma.API, svc *application.StubService) {
 		Method:        http.MethodPost,
 		Path:          "/stubs",
 		Summary:       "Create a stub",
-		Tags:          []string{"Tracks"},
+		Tags:          []string{"Example"},
 		DefaultStatus: http.StatusCreated,
 	}, func(ctx context.Context, input *createStubInput) (*stubOutput, error) {
 		stub, err := svc.CreateStub(ctx, input.Body.Name)
@@ -58,7 +58,7 @@ func RegisterStub(api huma.API, svc *application.StubService) {
 		Method:      http.MethodGet,
 		Path:        "/stubs/{id}",
 		Summary:     "Get a stub by id",
-		Tags:        []string{"Tracks"},
+		Tags:        []string{"Example"},
 	}, func(ctx context.Context, input *getStubInput) (*stubOutput, error) {
 		stub, err := svc.GetStub(ctx, input.ID)
 		if err != nil {
