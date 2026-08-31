@@ -10,7 +10,7 @@ This document tracks implementation status, open design questions, and prioritiz
 
 1. **Auth Foundation → Auth Provider Abstraction** — internally ordered, each depends on the one before it. Both are now unblocked: Authentication & RBAC landed the `users/` track and the `SessionIssuer` port they consume.
 2. **Frontend-Backend Integration** — depends on Auth Foundation existing first, to carry identity through the typed client.
-3. **Scaffolding CLI — add & dev-loop generators**, **Backend Live-Reload** — CLI/dev-loop completeness, independent of Auth.
+3. **Scaffolding CLI — add & dev-loop generators** — CLI/dev-loop completeness, independent of Auth.
 4. **Contract Sync & Reverse URLs**, **E2E Testing** (Playwright) — frontend/testing completeness, independent of Auth.
 5. **Agent Guardrails (Codex/other)** (`AGENTS.md`), **Spec-Driven Docs Tree** — docs/guardrails completeness, independent of Auth.
 6. **Security Baseline**, **Production Containerization** — production readiness, last since it hardens what the rest of this list builds.
@@ -44,7 +44,7 @@ This document tracks implementation status, open design questions, and prioritiz
 | **Security Baseline** | Echo security-headers middleware, CORS config, baseline rate limiter | Security headers middleware, CORS configuration, and an in-process rate-limiting baseline applied to every generated project regardless of feature packs selected (distinct from Feature Pack D's distributed/Redis-backed limiter — see README.md). | **Pending** |
 | **Frontend-Backend Integration** | Typed API client + data-fetching layer | Typed frontend API client wired into a data-fetching layer, with environment-based API base URL handling across dev/CI/prod. | **Pending** |
 | **Production Containerization** | Multi-stage `Dockerfile`s (backend + frontend) | Production-grade multi-stage Docker builds for backend and frontend, with `make` targets and CI updated to build/run via Docker instead of host toolchains. Open question: whether `mise`-managed toolchains are still needed inside the image or can be dropped for a leaner runtime stage. Feeds directly into the Deployment Target feature pack (README.md), which selects the deploy target on top of these images. | **Pending** |
-| **Backend Live-Reload** | [`air`](https://github.com/air-verse/air) | Watches Go source changes and restarts the server automatically during `make run`, closing the local-dev hot-reload gap versus frameworks like Buffalo. | **Pending** |
+| **Backend Live-Reload** | `gonext dev` (`internal/dev`) | Watches `backend/` for `.go` changes and rebuilds/restarts the server automatically during `make run`, closing the local-dev hot-reload gap versus frameworks like Buffalo. Implemented as a `gonext` CLI subcommand rather than a vendored third-party watcher (`air`), so no generated project depends on or configures one; also regenerates `backend/main.go` from its canonical template before every build. | Done |
 
 ---
 
@@ -164,7 +164,7 @@ Dev-loop commands should be thin wrappers around existing `make` targets where o
 
 Identified by comparing this roadmap against **create-t3-app**, **Buffalo** (gobuffalo.io), **Encore.dev**, and **RedwoodJS** — frameworks that overlap with this project's scaffolding-CLI + pluggable-stack philosophy. None of them combine Go + Next.js + AI-agent guardrails the way this roadmap does, but each covers at least one gap below that this roadmap does not yet address.
 
-**Resolved and promoted out of this table**: Deployment/hosting story → *Deployment Target* feature pack (README.md); Swappable third-party auth → *Auth Provider Abstraction* (Core Foundations above); Backend live-reload → *Backend Live-Reload* (Core Foundations above). These are no longer open gaps — they have a decided home and a **Pending** status there.
+**Resolved and promoted out of this table**: Deployment/hosting story → *Deployment Target* feature pack (README.md, **Pending**); Swappable third-party auth → *Auth Provider Abstraction* (Core Foundations above, **Pending**); Backend live-reload → *Backend Live-Reload* (Core Foundations above, **Done**). These are no longer open gaps — they have a decided home in one of the tables above instead.
 
 | Gap | Seen In | Priority | Notes |
 |---|---|---|---|
