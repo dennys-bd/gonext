@@ -14,8 +14,10 @@ import (
 const modulePathToken = "[MODULE-PATH]"
 
 // runnerFilename is the fixed, gitignored name the temp runner is
-// materialized under at the target project's root.
-const runnerFilename = ".gonext-migrate-runner.go"
+// materialized under at the target project's root. It must not start
+// with "." or "_": the go tool silently excludes such files, which
+// makes `go run` report "no Go files" instead of running it.
+const runnerFilename = "gonext_migrate_runner.go"
 
 const runnerFileMode = 0o644
 
