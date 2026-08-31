@@ -5,8 +5,8 @@ PORT ?= 8080
 DATABASE_URL ?= postgres://app:app@localhost:5432/app?sslmode=disable
 TEST_DATABASE_URL ?= postgres://app:app@localhost:5432/app_test?sslmode=disable
 
-run: ## Run the backend server on $PORT (default 8080)
-	ENV=$(ENV) DATABASE_URL=$(DATABASE_URL) go run ./backend
+run: ## Run the backend server on $PORT (default 8080), rebuilding and restarting on change
+	ENV=$(ENV) DATABASE_URL=$(DATABASE_URL) gonext dev
 
 build: ## Build all backend packages
 	mise exec -- go build ./...
