@@ -41,7 +41,7 @@ go.work.sum
 # Temp file gonext migrate materializes to run pending migrations,
 # deleted immediately after — should never be committed if a crash
 # leaves it behind.
-/gonext_migrate_runner.go
+/backend/gonext_migrate_runner.go
 
 # env file
 .env

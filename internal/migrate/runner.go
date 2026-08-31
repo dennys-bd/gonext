@@ -29,22 +29,25 @@ var runnerTemplate []byte
 var runFunc = xexec.Run
 
 // Apply resolves root's module path, materializes a temporary runner
-// file at root with the module path substituted in, runs it via
-// `go run`, and removes it afterward regardless of outcome.
+// file under root/backend (so it can see backend's internal/
+// packages — Go's internal-import rule would block a file at root
+// itself) with the module path substituted in, runs it via `go run`,
+// and removes it afterward regardless of outcome.
 func Apply(ctx context.Context, root string) error {
 	modulePath, err := ModulePath(root)
 	if err != nil {
 		return fmt.Errorf("resolving module path: %w", err)
 	}
 
-	runnerPath := filepath.Join(root, runnerFilename)
+	backendDir := filepath.Join(root, "backend")
+	runnerPath := filepath.Join(backendDir, runnerFilename)
 	content := bytes.ReplaceAll(runnerTemplate, []byte(modulePathToken), []byte(modulePath))
 	if err := os.WriteFile(runnerPath, content, runnerFileMode); err != nil {
 		return fmt.Errorf("writing migration runner: %w", err)
 	}
 	defer os.Remove(runnerPath)
 
-	if err := runFunc(ctx, root, "go", "run", runnerFilename); err != nil {
+	if err := runFunc(ctx, backendDir, "go", "run", runnerFilename); err != nil {
 		return fmt.Errorf("running migrations: %w", err)
 	}
 	return nil
