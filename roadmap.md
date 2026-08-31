@@ -160,6 +160,39 @@ Dev-loop commands should be thin wrappers around existing `make` targets where o
 
 ---
 
+## Published Contract Candidates
+
+A third code-placement category alongside *scaffoldable* (`templates/`) and *CLI-native* (`cmd/` + `internal/`): a small, stable port published as its own nested, dependency-free Go module that generated projects **import** rather than vendor, so an implementation can be written outside any single project. See `CLAUDE.md`, *Where does a new feature's code go?*.
+
+The first one, `auth/` (`github.com/dennys-bd/gonext/auth`), is designed but **not yet built** — see *Auth Provider Abstraction* in *Core Foundations* above.
+
+**The bar:** a port with at least two plausible implementations, *one of which someone outside this repo might write*. The second clause does all the work. A scaffolded port lands at `<project>/backend/internal/…`, giving every generated project a structurally identical but distinct type at an `internal`-sealed import path — so no external implementation can exist at all. Publishing is justified only when that is the actual constraint, not merely when an interface looks reusable.
+
+**The sequencing rule:** publish a port only once its *second* implementation actually exists. `auth` earns it because Clerk, Supabase and Auth0 are real, external and inevitable, so its shape is observed rather than guessed. A port with one implementation is a guess dressed as an abstraction — and unlike scaffolded code, a published contract cannot be withdrawn without breaking consumers. Every module published is a permanent semver commitment from a repo currently at v0.
+
+| Candidate | Verdict | Notes |
+|---|---|---|
+| **Background worker** | **Next after auth** | The *Scaffolding CLI Design Concept* above already offers River, Machinery and Watermill as a scaffold-time engine choice. Three implementations of one concept is the definition of a port, and a third party writing a Temporal or SQS adapter is entirely plausible. Highest-value candidate once a worker pack exists. |
+| **Blob storage** | **Publish** | `Put`/`Get`/`Delete`/`SignedURL` over S3, R2, GCS, Azure, MinIO or local disk. Well-understood shape, many real backends, low design risk. |
+| **Notifier** (email, later SMS) | **Publish — but reshape first** | Already exists as `users/domain.Notifier`, but its methods are `SendConfirmation`/`SendAccountExistsNotice` — the users track's vocabulary, not a mailer's. A published port must be a generic `Send(ctx, Message)`, with the users track owning its own templates on top. Resend, SMTP, Postmark and SES are all real implementations. Blocked on the Transactional Email pack. |
+| **Cache / rate limiter** | **Probably, later** | In-memory and Redis are two genuine implementations, and *Security Baseline* needs the limiter regardless. But cache interfaces leak badly — TTL semantics, invalidation, bytes vs. typed values — so this needs its own design pass rather than extraction from whatever ships first. |
+| **Transactor** (`internal/database`) | **Undecided** | The transaction-boundary port is genuinely generic across Bun, pgx and sqlc, and *allow more db backends* is already in *Tech debts* below. But nobody outside writes a transactor for someone else's project, so it fails the second clause. Revisit only if multi-backend support materialises. |
+| **PasswordHasher** | **No** | Argon2id, bcrypt and scrypt exist, but nobody ships third-party hasher adapters. An internal seam, not a contract. |
+| **Repositories / `Store`** | **No** | Publishing these means publishing the users track's schema. That is coupling, not a contract. |
+| **Tracing, metrics, logging** | **No — the contract already exists** | OpenTelemetry and `log/slog` *are* the published contracts. A `gonext/observability` port would reinvent them with fewer users. The best contract is frequently one someone else already published. |
+| **API protocol layer, deployment targets** | **No** | Engine choices and static manifests. No runtime seam to abstract. |
+| **OAuth** (*Tech debts* below) | **Already covered** | Another `auth.Resolver`, or a sibling port inside `auth/`. No new module. |
+
+### Tracked: `httpx` may have to be published
+
+The Auth Foundation design scaffolds `backend/internal/presentation/httpx` — the `huma.Register` wrapper that hands handlers a `*httpx.Ctx`. That is the right call while every feature pack is *generated into* a project.
+
+It stops being the right call the moment a feature pack ships as an installable module instead. A third-party Redis rate limiter, or a background worker's admin routes, would need `httpx.Register` to mount an endpoint — and `httpx` is scaffolded, so it is a different type at a different `internal`-sealed path in every project: exactly the problem publishing `auth/` solves. Publishing it is not free either, since `httpx` imports Huma and would tie a published module's version to the API protocol engine.
+
+So this is a decision deferred, not avoided: **if feature packs ever become installable modules rather than scaffolded code, `httpx` has to move into a published module first.** Directly relevant to the *Open plugin system* gap below.
+
+---
+
 ## Gaps vs. Comparable Frameworks (Tracked)
 
 Identified by comparing this roadmap against **create-t3-app**, **Buffalo** (gobuffalo.io), **Encore.dev**, and **RedwoodJS** — frameworks that overlap with this project's scaffolding-CLI + pluggable-stack philosophy. None of them combine Go + Next.js + AI-agent guardrails the way this roadmap does, but each covers at least one gap below that this roadmap does not yet address.
@@ -169,7 +202,7 @@ Identified by comparing this roadmap against **create-t3-app**, **Buffalo** (gob
 | Gap | Seen In | Priority | Notes |
 |---|---|---|---|
 | **Infra-as-code / preview environments** | Encore.dev | Medium | Encore provisions matching cloud infra per environment from code-declared dependencies (queues, cron, secrets) and spins up automatic PR preview environments. No equivalent concept here. Deliberately kept separate from the Deployment Target feature pack (README.md): that pack generates static deploy manifests, it does not provision or manage infrastructure. Deferred — large scope jump, revisit only after that pack ships. |
-| **Open plugin system** | Buffalo (`buffalo generate` plugins) | Low–Medium | Feature Packs A–I (README.md) are a fixed, curated list. No path for a third party to ship their own installable pack/generator. Deferred until the CLI (above) and existing packs are stable. |
+| **Open plugin system** | Buffalo (`buffalo generate` plugins) | Low–Medium | Feature Packs A–I (README.md) are a fixed, curated list. No path for a third party to ship their own installable pack/generator. Deferred until the CLI (above) and existing packs are stable. *Published Contract Candidates* above is the groundwork: each published port is one plugin point, and that section's `httpx` note records what still blocks a pack from shipping as an installable module rather than generated code. |
 | **Live architecture/service visibility** | Encore.dev (auto-generated service catalog + tracing UI from running code) | Low | The Graphify pack (Feature Pack H, README.md) is similar in spirit but static/offline (`make graphify`) rather than live from a running service. Deferred — natural future enhancement to Pack H once it exists, not a new pack of its own. |
 
 ---
