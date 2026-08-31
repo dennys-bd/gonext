@@ -77,3 +77,24 @@ func TestLogout_UnknownTokenIsNotAnError(t *testing.T) {
 		t.Fatalf("expected logging out an unknown session to be a no-op, got %v", err)
 	}
 }
+
+func TestProfile_ReturnsTheAccount(t *testing.T) {
+	f := newFixture(t, "test")
+	user := f.registerAndConfirm(t, testEmail, testPassword)
+
+	got, err := f.svc.Profile(context.Background(), user.ID)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got.ID != user.ID {
+		t.Errorf("Profile() returned user %q, want %q", got.ID, user.ID)
+	}
+}
+
+func TestProfile_UnknownUser(t *testing.T) {
+	f := newFixture(t, "test")
+
+	if _, err := f.svc.Profile(context.Background(), "nope"); err == nil {
+		t.Error("expected an error for an unknown user id")
+	}
+}

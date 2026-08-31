@@ -186,6 +186,20 @@ func (s *UserService) Me(ctx context.Context, token string) (auth.Identity, doma
 	return identity, user, nil
 }
 
+// Profile returns the account for userID.
+//
+// The auth middleware injects only an auth.Identity, deliberately:
+// widening the published contract to carry an email would put a
+// users-track concern into a type every provider must satisfy. The
+// one endpoint that renders the account pays one extra query instead.
+func (s *UserService) Profile(ctx context.Context, userID string) (domain.User, error) {
+	user, err := s.store.Users().GetByID(ctx, userID)
+	if err != nil {
+		return domain.User{}, fmt.Errorf("looking up user by id: %w", err)
+	}
+	return user, nil
+}
+
 // ConfirmEmail consumes an email confirmation token and marks the
 // account's email verified.
 func (s *UserService) ConfirmEmail(ctx context.Context, rawToken string) error {
