@@ -1,13 +1,17 @@
 meta {
   name: Create Stub
   type: http
-  seq: 1
+  seq: 5
 }
 
 post {
   url: {{baseUrl}}/stubs
   body: json
   auth: none
+}
+
+headers {
+  Cookie: {{exampleSessionCookie}}
 }
 
 body:json {

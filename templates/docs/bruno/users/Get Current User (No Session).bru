@@ -15,7 +15,7 @@ assert {
 }
 
 tests {
-  test("error detail mentions the session is invalid", function () {
-    expect(res.getBody().detail).to.include("session is invalid");
+  test("error detail reports that authentication is required", function () {
+    expect(res.getBody().detail).to.include("authentication required");
   });
 }

@@ -1,0 +1,43 @@
+meta {
+  name: Register (Example Setup)
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/users/register
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "{{exampleEmail}}",
+    "password": "{{examplePassword}}"
+  }
+}
+
+assert {
+  res.status: eq 202
+}
+
+tests {
+  test("returns a dev confirmation token", function () {
+    expect(res.getBody().token).to.be.a("string").and.not.empty;
+  });
+}
+
+script:pre-request {
+  // The example folder owns its own session: it runs before users/
+  // in directory order, and that folder's session is revoked by its
+  // own Logout request. A fresh email per run keeps a persistent
+  // smoke database from taking the already-registered branch.
+  bru.setVar("exampleEmail", `stub-${Date.now()}-${Math.floor(Math.random() * 100000)}@example.com`);
+  bru.setVar("examplePassword", "correct horse battery staple");
+}
+
+script:post-response {
+  if (res.status === 202) {
+    bru.setVar("exampleConfirmToken", res.body.token);
+  }
+}
