@@ -1,10 +1,11 @@
 package api
 
 import (
-	"context"
 	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
+
+	"golden-app/backend/internal/presentation/httpx"
 )
 
 type healthzOutput struct {
@@ -16,13 +17,13 @@ type healthzOutput struct {
 // RegisterHealthz registers the cross-cutting GET /healthz liveness
 // check. No domain owns it.
 func RegisterHealthz(api huma.API) {
-	huma.Register(api, huma.Operation{
+	httpx.Register(api, huma.Operation{
 		OperationID: "healthz",
 		Method:      http.MethodGet,
 		Path:        "/healthz",
 		Summary:     "Health check",
 		Tags:        []string{"System"},
-	}, func(_ context.Context, _ *struct{}) (*healthzOutput, error) {
+	}, func(_ *httpx.Ctx, _ *struct{}) (*healthzOutput, error) {
 		out := &healthzOutput{}
 		out.Body.Status = "ok"
 		return out, nil
