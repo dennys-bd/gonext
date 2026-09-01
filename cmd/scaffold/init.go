@@ -52,6 +52,10 @@ func runInit(args []string) int {
 		fmt.Fprintln(os.Stderr, "error: go mod init failed:", err)
 		return 1
 	}
+	if err := pinAuthModule(dest); err != nil {
+		fmt.Fprintln(os.Stderr, "error: pinning the auth module failed:", err)
+		return 1
+	}
 	if err := xexec.Run(ctx, dest, "go", "mod", "tidy"); err != nil {
 		fmt.Fprintln(os.Stderr, "error: go mod tidy failed:", err)
 		return 1
@@ -131,4 +135,12 @@ func bootstrapDatabase(ctx context.Context, dest string) error {
 		return fmt.Errorf("running migration: %w", err)
 	}
 	return nil
+}
+
+// pinAuthModule records the exact auth contract version this CLI was
+// built against, before `go mod tidy` gets a chance to resolve
+// something newer.
+func pinAuthModule(dest string) error {
+	require := scaffold.AuthModulePath + "@" + scaffold.AuthModuleVersion
+	return xexec.Run(context.Background(), dest, "go", "mod", "edit", "-require="+require)
 }

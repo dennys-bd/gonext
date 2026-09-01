@@ -9,6 +9,16 @@ import (
 
 const projectNameToken = "[PROJECT-NAME]"
 
+// AuthModulePath is gonext's published authentication contract, the
+// one gonext package a generated project imports at runtime.
+const AuthModulePath = "github.com/dennys-bd/gonext/auth"
+
+// AuthModuleVersion is the contract version `gonext init` pins into
+// generated projects. Bump it in the same change that tags a new
+// auth/vX.Y.Z, so a project keeps building against the contract its
+// scaffold was written for rather than drifting onto `latest`.
+const AuthModuleVersion = "v0.1.0"
+
 // binarySniffLen is how many leading bytes are inspected to decide
 // whether a file is binary, matching the heuristic Git itself uses.
 const binarySniffLen = 8192
