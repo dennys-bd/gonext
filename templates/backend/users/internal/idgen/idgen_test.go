@@ -19,7 +19,7 @@ func TestNew_ReturnsDistinctHexIDs(t *testing.T) {
 			t.Fatalf("expected 64 hex chars (256 bits), got %d: %q", len(id), id)
 		}
 		for _, c := range id {
-			if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')) {
+			if (c < '0' || c > '9') && (c < 'a' || c > 'f') {
 				t.Fatalf("expected lowercase hex, got %q", id)
 			}
 		}

@@ -1,3 +1,5 @@
+// Package main is the generated backend's entry point: it builds the
+// dependency graph via wire and runs the assembled App.
 package main
 
 import (

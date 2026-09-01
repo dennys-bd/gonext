@@ -10,8 +10,29 @@ linters:
     - revive
     - gocyclo
     - dupl
+    - forbidigo
   settings:
     gocyclo:
       min-complexity: 15
     dupl:
       threshold: 100
+    forbidigo:
+      forbid:
+        - pattern: '^huma\.Register$'
+          msg: use httpx.Register so the handler receives *httpx.Ctx (see CLAUDE.md, "Guarding an endpoint")
+  exclusions:
+    rules:
+      - path: internal/presentation/httpx/
+        linters:
+          - forbidigo
+      # Table-driven and concurrency tests branch more than production
+      # code without being harder to read.
+      - path: _test\.go
+        linters:
+          - gocyclo
+      # toHTTPError returns (error, bool): the comma-ok idiom, where the
+      # bool reports recognition rather than failure.
+      - path: users/internal/presentation/users\.go
+        linters:
+          - revive
+        text: 'error-return'
