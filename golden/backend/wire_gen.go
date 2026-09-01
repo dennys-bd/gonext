@@ -31,20 +31,23 @@ func InitializeApp(ctx context.Context) (*App, func(), error) {
 	}
 	logger := logging.New(configConfig)
 	echo := api.NewEcho(logger)
-	humaAPI := api.NewHumaAPI(echo)
-	healthzRegistered := api.ProvideHealthzRegistration(humaAPI)
 	string2 := configConfig.DatabaseURL
 	db, cleanup, err := database.ProvideDB(ctx, string2)
 	if err != nil {
 		return nil, nil, err
 	}
+	sessionIssuer := users.ProvideSessionIssuer(db)
+	resolver := users.ProvideResolver(sessionIssuer)
+	authConfig := api.ProvideAuthConfig()
+	humaAPI := api.NewHumaAPI(echo, resolver, authConfig, logger)
+	healthzRegistered := api.ProvideHealthzRegistration(humaAPI)
 	readyzRegistered := api.ProvideReadyzRegistration(humaAPI, db)
 	registered, err := example.ProvideRegistration(humaAPI, db)
 	if err != nil {
 		cleanup()
 		return nil, nil, err
 	}
-	usersRegistered, err := users.ProvideRegistration(humaAPI, db, configConfig, logger)
+	usersRegistered, err := users.ProvideRegistration(humaAPI, db, configConfig, logger, sessionIssuer)
 	if err != nil {
 		cleanup()
 		return nil, nil, err
