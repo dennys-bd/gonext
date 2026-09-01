@@ -19,7 +19,7 @@ Ask whether the feature becomes part of every generated project's own source tre
 
 - **Scaffoldable** — code, config, or Makefile targets that should be copied verbatim into generated projects by `scaffold.Copy()` — goes in `templates/`. The name says it all.
 - **CLI-native** — a capability a generated project invokes but does not vendor, such as a `gonext dev` live-reload subcommand — goes in this repo's `cmd/` (as a new subcommand) and `internal/` (its implementation). Running it from inside any scaffolded project always executes whatever `gonext` is currently installed, never a copy frozen at scaffold time.
-- **Published contract** — a small, stable type or interface that generated projects *and* third-party extensions both compile against — goes in its own nested module at the repo root (today: `auth/`, published as `github.com/dennys-bd/gonext/auth`). Use this only when an implementation has to be writable from outside a generated project: a port scaffolded into `<project>/backend/internal/…` gives every project a distinct type at an `internal`-sealed path, so nobody can implement it externally. The bar is deliberately high — a port with at least two plausible implementations, one of which someone outside this repo might write. Nested rather than part of the root module because the root `go.mod` carries the CLI's charmbracelet dependencies, which no generated backend should inherit.
+- **Core library** — a small, stable type or interface that generated projects *and* third-party extensions both compile against — goes in a top-level package of this same module (today `auth/`, imported as `github.com/dennys-bd/gonext/auth`). gonext ships as **one module under one version**: the CLI a developer runs and the library their project imports are the same artifact at the same `vX.Y.Z`. Use this only when an implementation has to be writable from outside a generated project — a port scaffolded into `<project>/backend/internal/…` gives every project a distinct type at an `internal`-sealed path, so nobody can implement it externally. The bar is deliberately high: a port with at least two plausible implementations, one of which someone outside this repo might write. Such a package must import **stdlib only**, so a project taking gonext as a dependency compiles none of the CLI's charmbracelet tree.
 
 ## The templates/ ↔ golden/ relationship
 
@@ -49,14 +49,12 @@ which is `go run ./cmd/golden` — it backs up any existing `golden/` to `golden
 Standard `go test`, table-driven, with `-race` in CI-equivalent runs:
 
 ```sh
-go build ./cmd/... ./internal/... .   # excludes templates/, which never builds standalone
-go vet ./cmd/... ./internal/... .
-go test -race ./cmd/... ./internal/... .
-
-cd auth && go test -race ./...        # auth/ is a separate module; root patterns don't reach it
+go build ./auth/... ./cmd/... ./internal/... .   # excludes templates/, which never builds standalone
+go vet ./auth/... ./cmd/... ./internal/... .
+go test -race ./auth/... ./cmd/... ./internal/... .
 ```
 
-`make test` runs both modules in the right order.
+`make test` runs exactly that. There is one module, so no separate invocation is needed for `auth/`.
 
 `cmd/scaffold/init_e2e_test.go` is opt-in only (`GONEXT_E2E=1`) since it hits the network and installs real dependencies into a temp dir — it's not part of the fast loop.
 
