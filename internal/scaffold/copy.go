@@ -19,7 +19,11 @@ const ModulePath = "github.com/dennys-bd/gonext"
 // generated projects. Bump it in the same change that tags a new
 // vX.Y.Z, so a project keeps building against the library its
 // scaffold was written for rather than drifting onto `latest`.
-const ModuleVersion = "v0.1.0"
+//
+// It is a pseudo-version until the first release is tagged: gonext is
+// resolvable from any pushed commit, so generated projects build
+// today without waiting on a tag.
+const ModuleVersion = "v0.0.0-20260901030717-52ea7aa89005"
 
 // binarySniffLen is how many leading bytes are inspected to decide
 // whether a file is binary, matching the heuristic Git itself uses.
