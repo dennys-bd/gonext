@@ -20,6 +20,6 @@ assert {
 
 tests {
   test("the session Logout revoked is no longer accepted", function () {
-    expect(res.getBody().detail).to.include("session is invalid");
+    expect(res.getBody().detail).to.include("authentication required");
   });
 }

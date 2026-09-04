@@ -1,0 +1,27 @@
+meta {
+  name: Confirm Email (Example Setup)
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/users/confirm-email
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "token": "{{exampleConfirmToken}}"
+  }
+}
+
+assert {
+  res.status: eq 200
+}
+
+tests {
+  test("confirms the account so login does not depend on a relaxed ENV", function () {
+    expect(res.getBody().message).to.be.a("string").and.not.empty;
+  });
+}

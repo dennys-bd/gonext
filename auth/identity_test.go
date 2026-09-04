@@ -1,13 +1,13 @@
-package domain_test
+package auth_test
 
 import (
 	"testing"
 
-	"golden-app/backend/users/domain"
+	"github.com/dennys-bd/gonext/auth"
 )
 
 func TestIdentity_HasRole(t *testing.T) {
-	id := domain.Identity{UserID: "u-1", Role: "admin"}
+	id := auth.Identity{UserID: "u-1", Role: "admin"}
 
 	if !id.HasRole("admin") {
 		t.Error("expected HasRole(admin) to be true")
@@ -18,7 +18,7 @@ func TestIdentity_HasRole(t *testing.T) {
 }
 
 func TestIdentity_HasPermission(t *testing.T) {
-	id := domain.Identity{Role: "admin", Permissions: []string{"posts:delete", "posts:edit"}}
+	id := auth.Identity{Role: "admin", Permissions: []string{"posts:delete", "posts:edit"}}
 
 	if !id.HasPermission("posts:delete") {
 		t.Error("expected HasPermission(posts:delete) to be true")
@@ -29,7 +29,7 @@ func TestIdentity_HasPermission(t *testing.T) {
 }
 
 func TestIdentity_HasPermission_NoPermissionsSeeded(t *testing.T) {
-	id := domain.Identity{Role: "user"}
+	id := auth.Identity{Role: "user"}
 
 	if id.HasPermission("posts:delete") {
 		t.Error("expected HasPermission to be false when no permissions are seeded")

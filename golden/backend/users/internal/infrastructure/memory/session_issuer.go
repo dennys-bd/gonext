@@ -6,6 +6,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/dennys-bd/gonext/auth"
+
 	"golden-app/backend/users/domain"
 )
 
@@ -49,19 +51,19 @@ func (i *SessionIssuer) Issue(_ context.Context, userID string) (string, time.Ti
 
 // Validate resolves token to an Identity and the account behind it,
 // or domain.ErrSessionInvalid.
-func (i *SessionIssuer) Validate(ctx context.Context, token string) (domain.Identity, domain.User, error) {
+func (i *SessionIssuer) Validate(ctx context.Context, token string) (auth.Identity, domain.User, error) {
 	i.mu.Lock()
 	s, ok := i.sessions[token]
 	i.mu.Unlock()
 	if !ok || !time.Now().UTC().Before(s.expiresAt) {
-		return domain.Identity{}, domain.User{}, domain.ErrSessionInvalid
+		return auth.Identity{}, domain.User{}, domain.ErrSessionInvalid
 	}
 
 	u, err := i.users.GetByID(ctx, s.userID)
 	if err != nil {
-		return domain.Identity{}, domain.User{}, domain.ErrSessionInvalid
+		return auth.Identity{}, domain.User{}, domain.ErrSessionInvalid
 	}
-	return domain.Identity{UserID: u.ID, Role: u.Role, Permissions: []string{}}, u, nil
+	return auth.Identity{UserID: u.ID, Role: u.Role, Permissions: []string{}}, u, nil
 }
 
 // Revoke forgets token. Revoking an unknown token is not an error, so

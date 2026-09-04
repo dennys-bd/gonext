@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/danielgtaylor/huma/v2"
+
+	"golden-app/backend/internal/presentation/httpx"
 )
 
 const readyzTimeout = 2 * time.Second
@@ -29,14 +31,14 @@ type readyzOutput struct {
 // DB-backed requests. Unlike /healthz, a failure here is non-fatal:
 // it returns 503 so callers back off and retry.
 func RegisterReadyz(api huma.API, db pinger) {
-	huma.Register(api, huma.Operation{
+	httpx.Register(api, huma.Operation{
 		OperationID: "readyz",
 		Method:      http.MethodGet,
 		Path:        "/readyz",
 		Summary:     "Readiness check",
 		Tags:        []string{"System"},
-	}, func(ctx context.Context, _ *struct{}) (*readyzOutput, error) {
-		ctx, cancel := context.WithTimeout(ctx, readyzTimeout)
+	}, func(rctx *httpx.Ctx, _ *struct{}) (*readyzOutput, error) {
+		ctx, cancel := context.WithTimeout(rctx, readyzTimeout)
 		defer cancel()
 
 		out := &readyzOutput{}

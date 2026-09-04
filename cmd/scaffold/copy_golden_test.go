@@ -38,6 +38,8 @@ const goldenDir = "../../golden"
 // excluded from the comparison via isGeneratedArtifact: Copy never
 // writes those, so they were never part of the comparison even when
 // this test's fixture was testdata/golden (which never had them).
+// Agent tool state (.omc/) is excluded the same way, at any depth —
+// see toolStateDirs.
 //
 // When a template change is intentional, regenerate golden/ with:
 //
@@ -72,6 +74,16 @@ var generatedDirs = []string{
 // Copy() does write).
 var generatedFiles = []string{"go.mod", "go.sum", ".env"}
 
+// toolStateDirs are directories agent tooling writes its own runtime
+// state into. Unlike generatedDirs these are not anchored to the top
+// level: a hook writes .omc/ relative to whatever directory a shell
+// happens to be sitting in, so one can appear at any depth under
+// golden/ simply because someone ran a command there. They are
+// gitignored, but this test walks the working tree rather than the
+// index, so without excluding them a stray hook write fails the
+// comparison as an unexpected file.
+var toolStateDirs = []string{".omc"}
+
 // isGeneratedArtifact reports whether rel is a tool-generated path
 // under golden/ that Copy never writes and so must be excluded from
 // the golden-snapshot comparison.
@@ -84,7 +96,11 @@ func isGeneratedArtifact(rel string) bool {
 			return true
 		}
 	}
-	return false
+	// Matched per path component so a directory merely sharing a
+	// prefix (.omcfoo) is still compared.
+	return slices.ContainsFunc(strings.Split(rel, "/"), func(part string) bool {
+		return slices.Contains(toolStateDirs, part)
+	})
 }
 
 func TestIsGeneratedArtifact(t *testing.T) {
@@ -103,6 +119,16 @@ func TestIsGeneratedArtifact(t *testing.T) {
 		{rel: "backend/cmd/server/main.go", want: false},
 		{rel: "frontend/package.json", want: false},
 		{rel: "README.md", want: false},
+		// Agent tool state, which lands at whatever depth a shell
+		// happened to be running at rather than only the top level.
+		{rel: ".omc", want: true},
+		{rel: ".omc/state/idle-notif-cooldown.json", want: true},
+		{rel: "backend/.omc/state/agent-replay.jsonl", want: true},
+		{rel: "docs/bruno/users/.omc/state/throttle.json", want: true},
+		// A name that merely starts with the same characters is not
+		// tool state and must still be compared.
+		{rel: "docs/.omcfoo/notes.md", want: false},
+		{rel: "docs/omc/notes.md", want: false},
 	}
 
 	for _, tt := range tests {

@@ -10,7 +10,9 @@ import (
 	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/dennys-bd/gonext/auth"
 
+	"[PROJECT-NAME]/backend/internal/presentation/httpx"
 	"[PROJECT-NAME]/backend/users/domain"
 	"[PROJECT-NAME]/backend/users/internal/application"
 )
@@ -46,10 +48,6 @@ type messageOutput struct {
 type userOutput struct {
 	SetCookie http.Cookie `header:"Set-Cookie"`
 	Body      userBody
-}
-
-type meInput struct {
-	Session string `cookie:"session" doc:"Session cookie issued by POST /users/login"`
 }
 
 type meOutput struct {
@@ -97,7 +95,7 @@ type passwordResetConfirmInput struct {
 // the client.
 func RegisterUsers(api huma.API, svc *application.UserService, cookies CookieOptions, logger *slog.Logger) {
 	fail := errorTranslator(logger)
-	huma.Register(api, huma.Operation{
+	httpx.Register(api, huma.Operation{
 		OperationID:   "register-user",
 		Method:        http.MethodPost,
 		Path:          "/users/register",
@@ -105,7 +103,7 @@ func RegisterUsers(api huma.API, svc *application.UserService, cookies CookieOpt
 		Description:   "Always responds the same way whether or not the email was already registered.",
 		Tags:          []string{"Users"},
 		DefaultStatus: http.StatusAccepted,
-	}, func(ctx context.Context, input *credentialsInput) (*acceptedOutput, error) {
+	}, func(ctx *httpx.Ctx, input *credentialsInput) (*acceptedOutput, error) {
 		res, err := svc.Register(ctx, input.Body.Email, input.Body.Password)
 		if err != nil {
 			return nil, fail(ctx, err)
@@ -115,14 +113,14 @@ func RegisterUsers(api huma.API, svc *application.UserService, cookies CookieOpt
 		return out, nil
 	})
 
-	huma.Register(api, huma.Operation{
+	httpx.Register(api, huma.Operation{
 		OperationID: "login-user",
 		Method:      http.MethodPost,
 		Path:        "/users/login",
 		Summary:     "Log in",
 		Description: "Issues a session and sets the session cookie.",
 		Tags:        []string{"Users"},
-	}, func(ctx context.Context, input *credentialsInput) (*userOutput, error) {
+	}, func(ctx *httpx.Ctx, input *credentialsInput) (*userOutput, error) {
 		token, expiresAt, err := svc.Login(ctx, input.Body.Email, input.Body.Password)
 		if err != nil {
 			return nil, fail(ctx, err)
@@ -139,7 +137,7 @@ func RegisterUsers(api huma.API, svc *application.UserService, cookies CookieOpt
 		}, nil
 	})
 
-	huma.Register(api, huma.Operation{
+	httpx.Register(api, huma.Operation{
 		OperationID:   "logout-user",
 		Method:        http.MethodPost,
 		Path:          "/users/logout",
@@ -147,34 +145,37 @@ func RegisterUsers(api huma.API, svc *application.UserService, cookies CookieOpt
 		Description:   "Revokes the current session and clears the session cookie.",
 		Tags:          []string{"Users"},
 		DefaultStatus: http.StatusNoContent,
-	}, func(ctx context.Context, input *logoutInput) (*logoutOutput, error) {
+		Security:      auth.Required(),
+	}, func(ctx *httpx.Ctx, input *logoutInput) (*logoutOutput, error) {
 		if err := svc.Logout(ctx, input.Session); err != nil {
 			return nil, fail(ctx, err)
 		}
 		return &logoutOutput{SetCookie: cookies.clearedSessionCookie()}, nil
 	})
 
-	huma.Register(api, huma.Operation{
+	httpx.Register(api, huma.Operation{
 		OperationID: "get-current-user",
 		Method:      http.MethodGet,
 		Path:        "/users/me",
 		Summary:     "Get the current user",
 		Tags:        []string{"Users"},
-	}, func(ctx context.Context, input *meInput) (*meOutput, error) {
-		identity, user, err := svc.Me(ctx, input.Session)
+		Security:    auth.Required(),
+	}, func(ctx *httpx.Ctx, _ *struct{}) (*meOutput, error) {
+		identity := ctx.Identity()
+		user, err := svc.Profile(ctx, identity.UserID)
 		if err != nil {
 			return nil, fail(ctx, err)
 		}
 		return &meOutput{Body: toUserBody(identity, user)}, nil
 	})
 
-	huma.Register(api, huma.Operation{
+	httpx.Register(api, huma.Operation{
 		OperationID: "confirm-user-email",
 		Method:      http.MethodPost,
 		Path:        "/users/confirm-email",
 		Summary:     "Confirm an email address",
 		Tags:        []string{"Users"},
-	}, func(ctx context.Context, input *confirmEmailInput) (*messageOutput, error) {
+	}, func(ctx *httpx.Ctx, input *confirmEmailInput) (*messageOutput, error) {
 		if err := svc.ConfirmEmail(ctx, input.Body.Token); err != nil {
 			return nil, fail(ctx, err)
 		}
@@ -183,7 +184,7 @@ func RegisterUsers(api huma.API, svc *application.UserService, cookies CookieOpt
 		return out, nil
 	})
 
-	huma.Register(api, huma.Operation{
+	httpx.Register(api, huma.Operation{
 		OperationID:   "request-password-reset",
 		Method:        http.MethodPost,
 		Path:          "/users/password-reset",
@@ -191,7 +192,7 @@ func RegisterUsers(api huma.API, svc *application.UserService, cookies CookieOpt
 		Description:   "Always responds the same way whether or not the email is registered.",
 		Tags:          []string{"Users"},
 		DefaultStatus: http.StatusAccepted,
-	}, func(ctx context.Context, input *passwordResetInput) (*acceptedOutput, error) {
+	}, func(ctx *httpx.Ctx, input *passwordResetInput) (*acceptedOutput, error) {
 		devToken, err := svc.RequestPasswordReset(ctx, input.Body.Email)
 		if err != nil {
 			return nil, fail(ctx, err)
@@ -201,13 +202,13 @@ func RegisterUsers(api huma.API, svc *application.UserService, cookies CookieOpt
 		return out, nil
 	})
 
-	huma.Register(api, huma.Operation{
+	httpx.Register(api, huma.Operation{
 		OperationID: "confirm-password-reset",
 		Method:      http.MethodPost,
 		Path:        "/users/password-reset/confirm",
 		Summary:     "Set a new password with a reset token",
 		Tags:        []string{"Users"},
-	}, func(ctx context.Context, input *passwordResetConfirmInput) (*messageOutput, error) {
+	}, func(ctx *httpx.Ctx, input *passwordResetConfirmInput) (*messageOutput, error) {
 		if err := svc.ConfirmPasswordReset(ctx, input.Body.Token, input.Body.Password); err != nil {
 			return nil, fail(ctx, err)
 		}
@@ -253,7 +254,7 @@ func toHTTPError(err error) (error, bool) {
 	}
 }
 
-func toUserBody(identity domain.Identity, user domain.User) userBody {
+func toUserBody(identity auth.Identity, user domain.User) userBody {
 	permissions := identity.Permissions
 	if permissions == nil {
 		permissions = []string{}

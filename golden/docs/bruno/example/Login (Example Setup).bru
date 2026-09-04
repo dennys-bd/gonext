@@ -1,0 +1,36 @@
+meta {
+  name: Login (Example Setup)
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/users/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "{{exampleEmail}}",
+    "password": "{{examplePassword}}"
+  }
+}
+
+assert {
+  res.status: eq 200
+}
+
+tests {
+  test("returns the account the stub requests will act as", function () {
+    expect(res.getBody().email).to.equal(bru.getVar("exampleEmail"));
+  });
+}
+
+script:post-response {
+  if (res.status === 200) {
+    const raw = res.getHeader("set-cookie");
+    const header = Array.isArray(raw) ? raw[0] : raw;
+    bru.setVar("exampleSessionCookie", header.split(";")[0]);
+  }
+}

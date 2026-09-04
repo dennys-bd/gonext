@@ -1,58 +1,78 @@
 package presentation
 
 import (
-	"encoding/json"
+	"context"
+	"io"
+	"log/slog"
 	"net/http"
 	"testing"
 
 	"github.com/danielgtaylor/huma/v2/humatest"
+	"github.com/dennys-bd/gonext/auth"
 
 	"[PROJECT-NAME]/backend/example/internal/application"
 	"[PROJECT-NAME]/backend/example/internal/infrastructure/memory"
+	apipkg "[PROJECT-NAME]/backend/internal/presentation/api"
 )
 
-func newTestAPI(t *testing.T) humatest.TestAPI {
-	_, api := humatest.New(t)
-	RegisterStub(api, application.NewStubService(memory.NewStubRepository()))
-	return api
+// rejectingResolver stands in for a provider with no valid sessions:
+// the example track's tests care that the guard is wired, not that
+// the users track works.
+type rejectingResolver struct{}
+
+func (rejectingResolver) Resolve(context.Context, string) (auth.Identity, error) {
+	return auth.Identity{}, auth.ErrUnauthenticated
 }
 
-func TestCreateAndGetStub_RoundTrip(t *testing.T) {
-	api := newTestAPI(t)
+func newTestAPI(t *testing.T) (humatest.TestAPI, *application.StubService) {
+	t.Helper()
 
-	createResp := api.Post("/stubs", map[string]string{"name": "demo"})
-	if createResp.Code != http.StatusCreated {
-		t.Fatalf("create: expected 201, got %d: %s", createResp.Code, createResp.Body.String())
+	_, api := humatest.New(t)
+	api.UseMiddleware(apipkg.NewAuthMiddleware(
+		api,
+		rejectingResolver{},
+		apipkg.ProvideAuthConfig(),
+		slog.New(slog.NewTextHandler(io.Discard, nil)),
+	))
+
+	svc := application.NewStubService(memory.NewStubRepository())
+	RegisterStub(api, svc)
+	return api, svc
+}
+
+// Creating a stub is a write, so it requires a session; reading one
+// does not. This is the reference every generated project copies.
+func TestCreateStub_RequiresASession(t *testing.T) {
+	api, _ := newTestAPI(t)
+
+	resp := api.Post("/stubs", map[string]string{"name": "demo"})
+	if resp.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 without a session, got %d: %s", resp.Code, resp.Body.String())
+	}
+}
+
+// GET /stubs/{id} declares no security requirement, so it stays
+// reachable without a credential. The stub is seeded through the
+// service rather than the API, since POST /stubs is now guarded.
+func TestGetStub_IsPublic(t *testing.T) {
+	api, svc := newTestAPI(t)
+
+	stub, err := svc.CreateStub(context.Background(), "demo")
+	if err != nil {
+		t.Fatalf("seeding a stub: %v", err)
 	}
 
-	var created struct {
-		ID string `json:"id"`
-	}
-	if err := json.Unmarshal(createResp.Body.Bytes(), &created); err != nil {
-		t.Fatalf("decode create response: %v", err)
-	}
-	if created.ID == "" {
-		t.Fatalf("expected non-empty id in response: %s", createResp.Body.String())
-	}
-
-	getResp := api.Get("/stubs/" + created.ID)
-	if getResp.Code != http.StatusOK {
-		t.Fatalf("get: expected 200, got %d: %s", getResp.Code, getResp.Body.String())
+	resp := api.Get("/stubs/" + stub.ID)
+	if resp.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", resp.Code, resp.Body.String())
 	}
 }
 
 func TestGetStub_NotFound(t *testing.T) {
-	api := newTestAPI(t)
+	api, _ := newTestAPI(t)
+
 	resp := api.Get("/stubs/does-not-exist")
 	if resp.Code != http.StatusNotFound {
 		t.Fatalf("expected 404, got %d: %s", resp.Code, resp.Body.String())
-	}
-}
-
-func TestCreateStub_EmptyName(t *testing.T) {
-	api := newTestAPI(t)
-	resp := api.Post("/stubs", map[string]string{"name": ""})
-	if resp.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d: %s", resp.Code, resp.Body.String())
 	}
 }

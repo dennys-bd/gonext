@@ -9,8 +9,11 @@ import (
 	"time"
 
 	"github.com/danielgtaylor/huma/v2/humatest"
+	"github.com/dennys-bd/gonext/auth"
 
+	apipkg "[PROJECT-NAME]/backend/internal/presentation/api"
 	"[PROJECT-NAME]/backend/users/internal/application"
+	authadapter "[PROJECT-NAME]/backend/users/internal/infrastructure/auth"
 	"[PROJECT-NAME]/backend/users/internal/infrastructure/memory"
 )
 
@@ -23,17 +26,26 @@ func newTestAPI(t *testing.T, env string) humatest.TestAPI {
 	t.Helper()
 
 	store := memory.NewStore()
+	issuer := memory.NewSessionIssuer(store.Users(), time.Hour)
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+
+	_, api := humatest.New(t)
+	api.UseMiddleware(apipkg.NewAuthMiddleware(
+		api,
+		authadapter.NewResolver(issuer),
+		apipkg.ProvideAuthConfig(),
+		logger,
+	))
+
 	svc := application.NewUserService(
 		store,
 		store,
-		memory.NewSessionIssuer(store.Users(), time.Hour),
+		issuer,
 		memory.NewNotifier(),
 		application.NewArgon2Hasher(),
 		env,
 	)
-
-	_, api := humatest.New(t)
-	RegisterUsers(api, svc, NewCookieOptions(env), slog.New(slog.NewTextHandler(io.Discard, nil)))
+	RegisterUsers(api, svc, NewCookieOptions(env), logger)
 	return api
 }
 
@@ -167,7 +179,7 @@ func TestMe_ReadsSessionCookie(t *testing.T) {
 	}
 	cookie := sessionCookieFrom(t, login.Header().Get("Set-Cookie"))
 
-	resp := api.Get("/users/me", "Cookie: "+SessionCookieName+"="+cookie.Value)
+	resp := api.Get("/users/me", "Cookie: "+auth.DefaultCookieName+"="+cookie.Value)
 	if resp.Code != http.StatusOK {
 		t.Fatalf("me: expected 200, got %d: %s", resp.Code, resp.Body.String())
 	}
@@ -196,7 +208,7 @@ func TestLogout_ClearsCookieAndRevokesSession(t *testing.T) {
 
 	login := api.Post("/users/login", map[string]string{"email": testEmail, "password": testPassword})
 	cookie := sessionCookieFrom(t, login.Header().Get("Set-Cookie"))
-	header := "Cookie: " + SessionCookieName + "=" + cookie.Value
+	header := "Cookie: " + auth.DefaultCookieName + "=" + cookie.Value
 
 	logout := api.Post("/users/logout", header)
 	if logout.Code != http.StatusNoContent {
@@ -301,10 +313,10 @@ func sessionCookieFrom(t *testing.T, setCookie string) *http.Cookie {
 	header := http.Header{}
 	header.Add("Set-Cookie", setCookie)
 	for _, c := range (&http.Response{Header: header}).Cookies() {
-		if c.Name == SessionCookieName {
+		if c.Name == auth.DefaultCookieName {
 			return c
 		}
 	}
-	t.Fatalf("no %q cookie in %q", SessionCookieName, setCookie)
+	t.Fatalf("no %q cookie in %q", auth.DefaultCookieName, setCookie)
 	return nil
 }

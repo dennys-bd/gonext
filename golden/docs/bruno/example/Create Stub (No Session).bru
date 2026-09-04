@@ -1,0 +1,27 @@
+meta {
+  name: Create Stub (No Session)
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/stubs
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "name": "demo"
+  }
+}
+
+assert {
+  res.status: eq 401
+}
+
+tests {
+  test("rejects a write with no session", function () {
+    expect(res.getBody().detail).to.be.a("string").and.not.empty;
+  });
+}

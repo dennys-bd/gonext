@@ -9,6 +9,22 @@ import (
 
 const projectNameToken = "[PROJECT-NAME]"
 
+// ModulePath is gonext itself. It is both the CLI and the core
+// library a generated project imports at runtime (today
+// github.com/dennys-bd/gonext/auth), so a project depends on the one
+// module rather than on a separately versioned contract.
+const ModulePath = "github.com/dennys-bd/gonext"
+
+// ModuleVersion is the gonext version `gonext init` pins into
+// generated projects. Bump it in the same change that tags a new
+// vX.Y.Z, so a project keeps building against the library its
+// scaffold was written for rather than drifting onto `latest`.
+//
+// It is a pseudo-version until the first release is tagged: gonext is
+// resolvable from any pushed commit, so generated projects build
+// today without waiting on a tag.
+const ModuleVersion = "v0.0.0-20260901030717-52ea7aa89005"
+
 // binarySniffLen is how many leading bytes are inspected to decide
 // whether a file is binary, matching the heuristic Git itself uses.
 const binarySniffLen = 8192

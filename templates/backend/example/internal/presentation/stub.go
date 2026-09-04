@@ -3,15 +3,16 @@
 package presentation
 
 import (
-	"context"
 	"errors"
 	"net/http"
 	"time"
 
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/dennys-bd/gonext/auth"
 
 	"[PROJECT-NAME]/backend/example/domain"
 	"[PROJECT-NAME]/backend/example/internal/application"
+	"[PROJECT-NAME]/backend/internal/presentation/httpx"
 )
 
 type createStubInput struct {
@@ -35,14 +36,15 @@ type getStubInput struct {
 // RegisterStub registers POST /stubs and GET /stubs/{id} on api, backed
 // by svc.
 func RegisterStub(api huma.API, svc *application.StubService) {
-	huma.Register(api, huma.Operation{
+	httpx.Register(api, huma.Operation{
 		OperationID:   "create-stub",
 		Method:        http.MethodPost,
 		Path:          "/stubs",
 		Summary:       "Create a stub",
 		Tags:          []string{"Example"},
 		DefaultStatus: http.StatusCreated,
-	}, func(ctx context.Context, input *createStubInput) (*stubOutput, error) {
+		Security:      auth.Required(),
+	}, func(ctx *httpx.Ctx, input *createStubInput) (*stubOutput, error) {
 		stub, err := svc.CreateStub(ctx, input.Body.Name)
 		if err != nil {
 			if errors.Is(err, domain.ErrStubNameRequired) {
@@ -53,13 +55,13 @@ func RegisterStub(api huma.API, svc *application.StubService) {
 		return toStubOutput(stub), nil
 	})
 
-	huma.Register(api, huma.Operation{
+	httpx.Register(api, huma.Operation{
 		OperationID: "get-stub",
 		Method:      http.MethodGet,
 		Path:        "/stubs/{id}",
 		Summary:     "Get a stub by id",
 		Tags:        []string{"Example"},
-	}, func(ctx context.Context, input *getStubInput) (*stubOutput, error) {
+	}, func(ctx *httpx.Ctx, input *getStubInput) (*stubOutput, error) {
 		stub, err := svc.GetStub(ctx, input.ID)
 		if err != nil {
 			if errors.Is(err, domain.ErrStubNotFound) {

@@ -4,11 +4,10 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/dennys-bd/gonext/auth"
+
 	"golden-app/backend/users/internal/application"
 )
-
-// SessionCookieName is the cookie the session token travels in.
-const SessionCookieName = "session"
 
 // CookieOptions carries the transport-level session cookie policy.
 // It lives here rather than in the domain or application layers:
@@ -32,7 +31,7 @@ func NewCookieOptions(env string) CookieOptions {
 // sessionCookie builds the Set-Cookie value that stores token.
 func (o CookieOptions) sessionCookie(token string, expiresAt time.Time) http.Cookie {
 	return http.Cookie{
-		Name:     SessionCookieName,
+		Name:     auth.DefaultCookieName,
 		Value:    token,
 		Path:     "/",
 		Expires:  expiresAt,
@@ -46,7 +45,7 @@ func (o CookieOptions) sessionCookie(token string, expiresAt time.Time) http.Coo
 // session cookie from the client.
 func (o CookieOptions) clearedSessionCookie() http.Cookie {
 	return http.Cookie{
-		Name:     SessionCookieName,
+		Name:     auth.DefaultCookieName,
 		Value:    "",
 		Path:     "/",
 		MaxAge:   -1,
