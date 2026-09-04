@@ -164,8 +164,8 @@ Builds directly on the Core Foundations' **Production Containerization** item (s
 | **Contract Sync & Reverse URLs** | **`@hey-api/openapi-ts` + `openapi-fetch`** | 100% type-safe reverse routing & auto-generated client SDK |
 | **Background Tasks** | **River (Postgres)** / **Machinery (Redis/AMQP)** / **Watermill (PubSub)** | Transactional outbox, multi-broker queues, or event streaming |
 | **Async Task Dashboard** | **River UI** / **RabbitMQ Console** / **Redpanda Console** | Real-time queue monitoring and worker health dashboard |
-| **Database Migrations** | **Goose** / **Golang-Migrate** | SQL-first schema migrations with rollback support |
-| **Auth System** | **Modular Go Auth** | Argon2id + Secure HttpOnly sessions/JWT + Role Middleware (RBAC) |
+| **Database Migrations** | **Bun migrator** (`gonext migrate`) | Hand-written Postgres migrations registered with Bun, applied by a CLI-native subcommand — no migration binary vendored into the project |
+| **Auth System** | **Modular Go Auth** | Argon2id + opaque HttpOnly cookie sessions + Role/Permission middleware (RBAC), behind a swappable provider port (JWT deliberately out of scope) |
 | **Email Service** | **Pluggable Mailer** (Resend/SendGrid/SMTP) | Multi-driver mailer with local **Mailpit** sandbox |
 | **Object Storage** | **S3 / Cloudflare R2 Client** | Direct-to-bucket pre-signed URL uploads + local **MinIO** server |
 | **Error Monitoring** | **Sentry** (`sentry-go` + `@sentry/nextjs`) | Full-stack error capture, stack traces, and sourcemap uploads |

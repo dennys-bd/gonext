@@ -2,6 +2,8 @@
 
 This document describes gonext's architecture **as designed** — what each component is, which technology it uses, and why. For the product vision and the full feature-pack catalog, see [README.md](./README.md).
 
+gonext's scope was set by benchmarking against **create-t3-app**, **Buffalo** (gobuffalo.io), **Encore.dev** and **RedwoodJS** — the frameworks that overlap with its scaffolding-CLI + pluggable-stack philosophy. None of them combine Go + Next.js + AI-agent guardrails the way this design does, but each covers ground worth borrowing from.
+
 **It does not track status.** What is built, what is in flight, and what is next all live on the project board:
 
 **→ [gonext project board](https://github.com/users/dennys-bd/projects/6)**
@@ -143,23 +145,9 @@ The CLI has two distinct command families. **Scaffold-time** commands run once, 
 
 Dev-loop commands should be thin wrappers around existing `make` targets where one already exists (e.g. Postgres, wire DI), rather than duplicating that logic — the CLI adds the interactive/templated parts (name prompts, file generation, boilerplate insertion) on top.
 
-### Scaffold-Time (run once)
+Scaffold-time is `gonext init` — the prompt flow above, plus pruning and the first migration. `gonext add <pack>` belongs to the same family, retrofitting a pack onto an already-generated project.
 
-| Command | Purpose |
-|---|---|
-| `gonext init` | Interactive prompt flow from the section above: select feature packs, prune unselected code, generate `.env`, run first migration. |
-| `gonext add <pack>` | Retrofit a feature pack onto an already-generated project (not just at init) — e.g. add Redis caching to a project that started API-only. |
-
-### Dev-Loop Generators (run repeatedly)
-
-| Command | Wraps / Extends | Purpose |
-|---|---|---|
-| `gonext generate migration <name>` | new — no `make` target to wrap; the old `backend/cmd/migrate create` was removed when `gonext migrate` replaced its `up` counterpart, so this command has no `create` equivalent yet | Scaffold a new timestamped SQL migration file. |
-| `gonext generate resource <name>` | new — composes Bun models/queries, Huma, Bruno | Full CRUD slice in one shot: migration + Bun model/query file + Huma handler + route registration + `docs/bruno/<Domain>/` request files (happy path + error cases), per the Bruno convention in `CLAUDE.md`. |
-| `gonext generate worker <name>` | new (pack-gated) | New River/Machinery/Watermill job skeleton — only available if a background-worker pack was selected at init. |
-| `gonext generate page <name>` | new | Next.js route + matching typed API client call via the generated OpenAPI client. |
-| `gonext generate` (wire refresh) | `make generate` / `make generate-check` | Regenerate `wire_gen.go` from DI providers, or check it's not stale (same check already enforced in CI/pre-commit). |
-| `gonext doctor` | `mise`, `make db-up`, `make lint` | Verify local toolchain versions match `.mise.toml`, DB is reachable, and no drift in generated files — a fast local health check before starting work. |
+Dev-loop is `gonext migrate` and `gonext dev` today. The generator set that fills it out — migration, resource, worker, page, wire refresh, doctor — is tracked on the board rather than inventoried here.
 
 ---
 
@@ -173,31 +161,21 @@ The first one, `auth/` (`github.com/dennys-bd/gonext/auth`), is built — see *A
 
 **The sequencing rule:** publish a port only once its *second* implementation actually exists. `auth` earns it because Clerk, Supabase and Auth0 are real, external and inevitable, so its shape is observed rather than guessed. A port with one implementation is a guess dressed as an abstraction — and unlike scaffolded code, a published contract cannot be withdrawn without breaking consumers. Every contract published is a permanent semver commitment from a repo currently at v0.
 
-| Candidate | Verdict | Notes |
+Candidates that clear the bar and are queued for publishing are tracked on the board. What stays here is the set of **settled decisions** — the ports deliberately *not* published, and the one waiting on something else — because those are what stop the same proposals coming back.
+
+| Candidate | Verdict | Why |
 |---|---|---|
-| **Background worker** | **Next after auth** | The *Scaffolding CLI Design Concept* above already offers River, Machinery and Watermill as a scaffold-time engine choice. Three implementations of one concept is the definition of a port, and a third party writing a Temporal or SQS adapter is entirely plausible. Highest-value candidate once a worker pack exists. |
-| **Blob storage** | **Publish** | `Put`/`Get`/`Delete`/`SignedURL` over S3, R2, GCS, Azure, MinIO or local disk. Well-understood shape, many real backends, low design risk. |
-| **Notifier** (email, later SMS) | **Publish — but reshape first** | Already exists as `users/domain.Notifier`, but its methods are `SendConfirmation`/`SendAccountExistsNotice` — the users track's vocabulary, not a mailer's. A published port must be a generic `Send(ctx, Message)`, with the users track owning its own templates on top. Resend, SMTP, Postmark and SES are all real implementations. Blocked on the Transactional Email pack. |
-| **Cache / rate limiter** | **Probably, later** | In-memory and Redis are two genuine implementations, and *Security Baseline* needs the limiter regardless. But cache interfaces leak badly — TTL semantics, invalidation, bytes vs. typed values — so this needs its own design pass rather than extraction from whatever ships first. |
-| **Transactor** (`internal/database`) | **Undecided** | The transaction-boundary port is genuinely generic across Bun, pgx and sqlc, and multi-backend support is tracked on the board. But nobody outside writes a transactor for someone else's project, so it fails the second clause. Revisit only if multi-backend support materialises. |
 | **PasswordHasher** | **No** | Argon2id, bcrypt and scrypt exist, but nobody ships third-party hasher adapters. An internal seam, not a contract. |
 | **Repositories / `Store`** | **No** | Publishing these means publishing the users track's schema. That is coupling, not a contract. |
 | **Tracing, metrics, logging** | **No — the contract already exists** | OpenTelemetry and `log/slog` *are* the published contracts. A `gonext/observability` port would reinvent them with fewer users. The best contract is frequently one someone else already published. |
 | **API protocol layer, deployment targets** | **No** | Engine choices and static manifests. No runtime seam to abstract. |
-| **OAuth** | **Already covered** | Another `auth.Resolver`, or a sibling port inside `auth/`. No new module. |
+| **OAuth** | **Already covered** | Another `auth.Resolver`, or a sibling port inside `auth/`. No new module needed. |
+| **Transactor** (`internal/database`) | **Conditional** | The transaction-boundary port is genuinely generic across Bun, pgx and sqlc. But nobody outside writes a transactor for someone else's project, so it fails the second clause of the bar. Revisit only if multi-backend support actually materialises. |
 
-### Tracked: `httpx` may have to be published
+### When `httpx` would have to be published
 
 The Auth Foundation design scaffolds `backend/internal/presentation/httpx` — the `huma.Register` wrapper that hands handlers a `*httpx.Ctx`. That is the right call while every feature pack is *generated into* a project.
 
 It stops being the right call the moment a feature pack ships as an installable module instead. A third-party Redis rate limiter, or a background worker's admin routes, would need `httpx.Register` to mount an endpoint — and `httpx` is scaffolded, so it is a different type at a different `internal`-sealed path in every project: exactly the problem publishing `auth/` solves. Publishing it is not free either, since `httpx` imports Huma and would tie a published contract's version to the API protocol engine.
 
 So this is a decision deferred, not avoided: **if feature packs ever become installable modules rather than scaffolded code, `httpx` has to move into a published package first.** Directly relevant to the open plugin system issue on the board.
-
----
-
-## Benchmarks
-
-gonext's scope was set by comparing it against **create-t3-app**, **Buffalo** (gobuffalo.io), **Encore.dev**, and **RedwoodJS** — frameworks that overlap with this project's scaffolding-CLI + pluggable-stack philosophy. None of them combine Go + Next.js + AI-agent guardrails the way this design does, but each covers ground worth borrowing from.
-
-Where one of them still does something gonext does not, it is filed on the board under [`framework-gap`](https://github.com/dennys-bd/gonext/issues?q=is%3Aissue+label%3Aframework-gap).
