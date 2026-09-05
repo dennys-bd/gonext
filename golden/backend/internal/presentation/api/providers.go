@@ -1,6 +1,8 @@
 package api
 
 import (
+	"log/slog"
+
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/uptrace/bun"
 )
@@ -13,8 +15,8 @@ type HealthzRegistered struct{}
 
 // ProvideHealthzRegistration registers /healthz and returns a marker
 // wire can depend on to guarantee the registration ran.
-func ProvideHealthzRegistration(api huma.API) HealthzRegistered {
-	RegisterHealthz(api)
+func ProvideHealthzRegistration(api huma.API, logger *slog.Logger) HealthzRegistered {
+	RegisterHealthz(api, logger)
 	return HealthzRegistered{}
 }
 
@@ -28,7 +30,7 @@ type ReadyzRegistered struct{}
 // wire can depend on to guarantee the registration ran. It takes the
 // concrete *bun.DB (rather than the unexported pinger interface) so
 // wire.go, in package main, can wire it up.
-func ProvideReadyzRegistration(api huma.API, db *bun.DB) ReadyzRegistered {
-	RegisterReadyz(api, db)
+func ProvideReadyzRegistration(api huma.API, db *bun.DB, logger *slog.Logger) ReadyzRegistered {
+	RegisterReadyz(api, db, logger)
 	return ReadyzRegistered{}
 }

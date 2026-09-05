@@ -1,15 +1,19 @@
 package presentation
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/danielgtaylor/huma/v2/humatest"
 	"github.com/dennys-bd/gonext/auth"
 
+	"golden-app/backend/example/domain"
 	"golden-app/backend/example/internal/application"
 	"golden-app/backend/example/internal/infrastructure/memory"
 	apipkg "golden-app/backend/internal/presentation/api"
@@ -36,7 +40,7 @@ func newTestAPI(t *testing.T) (humatest.TestAPI, *application.StubService) {
 	))
 
 	svc := application.NewStubService(memory.NewStubRepository())
-	RegisterStub(api, svc)
+	RegisterStub(api, svc, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	return api, svc
 }
 
@@ -74,5 +78,43 @@ func TestGetStub_NotFound(t *testing.T) {
 	resp := api.Get("/stubs/does-not-exist")
 	if resp.Code != http.StatusNotFound {
 		t.Fatalf("expected 404, got %d: %s", resp.Code, resp.Body.String())
+	}
+}
+
+// failingStubRepository always fails with driver-shaped text, standing
+// in for a Postgres error the example track's group has no mapping
+// for.
+type failingStubRepository struct{}
+
+func (failingStubRepository) Create(context.Context, domain.Stub) error {
+	return nil
+}
+
+func (failingStubRepository) Get(context.Context, string) (domain.Stub, error) {
+	return domain.Stub{}, errors.New(`pq: relation stubs does not exist`)
+}
+
+// The generic mapped/unmapped/ordering behaviour is proven once in
+// httpx/errors_test.go; this is the per-track assertion that the
+// example group is actually wired with a logger and does not leak —
+// closing the defect this migration exists to fix.
+func TestGetStub_UnmappedRepositoryErrorDoesNotLeak(t *testing.T) {
+	const secretText = `pq: relation stubs does not exist`
+
+	logs := &bytes.Buffer{}
+	_, api := humatest.New(t)
+
+	svc := application.NewStubService(failingStubRepository{})
+	RegisterStub(api, svc, slog.New(slog.NewTextHandler(logs, nil)))
+
+	resp := api.Get("/stubs/abc")
+	if resp.Code != http.StatusInternalServerError {
+		t.Fatalf("expected 500, got %d: %s", resp.Code, resp.Body.String())
+	}
+	if strings.Contains(resp.Body.String(), secretText) {
+		t.Fatalf("expected the driver message not to reach the client, got %s", resp.Body.String())
+	}
+	if !strings.Contains(logs.String(), secretText) {
+		t.Fatalf("expected the real error to be logged server-side, got %q", logs.String())
 	}
 }

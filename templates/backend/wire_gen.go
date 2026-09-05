@@ -40,9 +40,9 @@ func InitializeApp(ctx context.Context) (*App, func(), error) {
 	resolver := users.ProvideResolver(sessionIssuer)
 	authConfig := api.ProvideAuthConfig()
 	humaAPI := api.NewHumaAPI(echo, resolver, authConfig, logger)
-	healthzRegistered := api.ProvideHealthzRegistration(humaAPI)
-	readyzRegistered := api.ProvideReadyzRegistration(humaAPI, db)
-	registered, err := example.ProvideRegistration(humaAPI, db)
+	healthzRegistered := api.ProvideHealthzRegistration(humaAPI, logger)
+	readyzRegistered := api.ProvideReadyzRegistration(humaAPI, db, logger)
+	registered, err := example.ProvideRegistration(humaAPI, db, logger)
 	if err != nil {
 		cleanup()
 		return nil, nil, err

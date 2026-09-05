@@ -4,6 +4,8 @@
 package example
 
 import (
+	"log/slog"
+
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/uptrace/bun"
 
@@ -12,12 +14,13 @@ import (
 	"golden-app/backend/example/internal/presentation"
 )
 
-// Register wires up the example domain's dependencies and registers its
-// HTTP endpoints on api, backed by db.
-func Register(api huma.API, db *bun.DB) error {
+// Register wires up the example domain's dependencies and registers
+// its HTTP endpoints on api, backed by db. Unmapped errors are logged
+// through logger.
+func Register(api huma.API, db *bun.DB, logger *slog.Logger) error {
 	repo := postgres.NewStubRepository(db)
 	svc := application.NewStubService(repo)
-	presentation.RegisterStub(api, svc)
+	presentation.RegisterStub(api, svc, logger)
 	return nil
 }
 
@@ -29,8 +32,8 @@ type Registered struct{}
 
 // ProvideRegistration calls Register and returns a marker wire can
 // depend on to guarantee the registration ran.
-func ProvideRegistration(api huma.API, db *bun.DB) (Registered, error) {
-	if err := Register(api, db); err != nil {
+func ProvideRegistration(api huma.API, db *bun.DB, logger *slog.Logger) (Registered, error) {
+	if err := Register(api, db, logger); err != nil {
 		return Registered{}, err
 	}
 	return Registered{}, nil

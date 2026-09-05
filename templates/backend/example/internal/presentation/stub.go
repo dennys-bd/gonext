@@ -3,7 +3,7 @@
 package presentation
 
 import (
-	"errors"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -33,44 +33,43 @@ type getStubInput struct {
 	ID string `path:"id" doc:"Stub id"`
 }
 
-// RegisterStub registers POST /stubs and GET /stubs/{id} on api, backed
-// by svc.
-func RegisterStub(api huma.API, svc *application.StubService) {
-	httpx.Register(api, huma.Operation{
-		OperationID:   "create-stub",
-		Method:        http.MethodPost,
-		Path:          "/stubs",
-		Summary:       "Create a stub",
-		Tags:          []string{"Example"},
-		DefaultStatus: http.StatusCreated,
-		Security:      auth.Required(),
-	}, func(ctx *httpx.Ctx, input *createStubInput) (*stubOutput, error) {
-		stub, err := svc.CreateStub(ctx, input.Body.Name)
-		if err != nil {
-			if errors.Is(err, domain.ErrStubNameRequired) {
-				return nil, huma.Error400BadRequest(err.Error())
-			}
-			return nil, err
-		}
-		return toStubOutput(stub), nil
-	})
+type handlers struct {
+	svc *application.StubService
+}
 
-	httpx.Register(api, huma.Operation{
-		OperationID: "get-stub",
-		Method:      http.MethodGet,
-		Path:        "/stubs/{id}",
-		Summary:     "Get a stub by id",
-		Tags:        []string{"Example"},
-	}, func(ctx *httpx.Ctx, input *getStubInput) (*stubOutput, error) {
-		stub, err := svc.GetStub(ctx, input.ID)
-		if err != nil {
-			if errors.Is(err, domain.ErrStubNotFound) {
-				return nil, huma.Error404NotFound(err.Error())
-			}
-			return nil, err
-		}
-		return toStubOutput(stub), nil
-	})
+// RegisterStub registers POST /stubs and GET /stubs/{id} on api, backed
+// by svc. Unmapped errors are logged through logger and returned to
+// the client as a flat 500.
+func RegisterStub(api huma.API, svc *application.StubService, logger *slog.Logger) {
+	h := &handlers{svc: svc}
+	g := httpx.NewGroup(api, "/stubs", "Example", logger).Errors(
+		httpx.Map(domain.ErrStubNameRequired, http.StatusBadRequest),
+		httpx.Map(domain.ErrStubNotFound, http.StatusNotFound),
+	)
+
+	httpx.Post(g, "", "create-stub", h.createStub,
+		httpx.Summary("Create a stub"),
+		httpx.Status(http.StatusCreated),
+		httpx.Secured(auth.Required()))
+
+	httpx.Get(g, "/{id}", "get-stub", h.getStub,
+		httpx.Summary("Get a stub by id"))
+}
+
+func (h *handlers) createStub(ctx *httpx.Ctx, in *createStubInput) (*stubOutput, error) {
+	stub, err := h.svc.CreateStub(ctx, in.Body.Name)
+	if err != nil {
+		return nil, err
+	}
+	return toStubOutput(stub), nil
+}
+
+func (h *handlers) getStub(ctx *httpx.Ctx, in *getStubInput) (*stubOutput, error) {
+	stub, err := h.svc.GetStub(ctx, in.ID)
+	if err != nil {
+		return nil, err
+	}
+	return toStubOutput(stub), nil
 }
 
 func toStubOutput(s domain.Stub) *stubOutput {

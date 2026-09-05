@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -29,15 +30,14 @@ type readyzOutput struct {
 // RegisterReadyz registers the cross-cutting GET /readyz readiness
 // check, which pings db to confirm the server can actually serve
 // DB-backed requests. Unlike /healthz, a failure here is non-fatal:
-// it returns 503 so callers back off and retry.
-func RegisterReadyz(api huma.API, db pinger) {
-	httpx.Register(api, huma.Operation{
-		OperationID: "readyz",
-		Method:      http.MethodGet,
-		Path:        "/readyz",
-		Summary:     "Readiness check",
-		Tags:        []string{"System"},
-	}, func(rctx *httpx.Ctx, _ *struct{}) (*readyzOutput, error) {
+// it is reported through the output's own Status field rather than
+// the error return, so it renders 503 and callers back off and retry
+// — the group wrapper only post-processes a non-nil error, so this
+// path is untouched by it.
+func RegisterReadyz(api huma.API, db pinger, logger *slog.Logger) {
+	g := httpx.NewGroup(api, "", "System", logger)
+
+	httpx.Get(g, "/readyz", "readyz", func(rctx *httpx.Ctx, _ *struct{}) (*readyzOutput, error) {
 		ctx, cancel := context.WithTimeout(rctx, readyzTimeout)
 		defer cancel()
 
@@ -50,5 +50,5 @@ func RegisterReadyz(api huma.API, db pinger) {
 		out.Status = http.StatusOK
 		out.Body.Status = "ok"
 		return out, nil
-	})
+	}, httpx.Summary("Readiness check"))
 }
