@@ -155,7 +155,7 @@ Dev-loop is `gonext migrate` and `gonext dev` today. The generator set that fill
 
 A third code-placement category alongside *scaffoldable* (`templates/`) and *CLI-native* (`cmd/` + `internal/`): a small, stable port published in gonext's own module that generated projects **import** rather than vendor, so an implementation can be written outside any single project. See `CLAUDE.md`, *Where does a new feature's code go?*.
 
-The first one, `auth/` (`github.com/dennys-bd/gonext/auth`), is built — see *Auth Provider Abstraction* in *Core Foundations* above. It is a package of the single gonext module rather than a separately versioned one: gonext publishes one version covering both the CLI and the library.
+The first one, `auth/` (`github.com/dennys-bd/gonext/auth`), is built — see *Auth Provider Abstraction* in *Core Foundations* above. It is a package of the single gonext module rather than a separately versioned one: gonext publishes one version covering both the CLI and the library. `httpx` is the second — see *`httpx` is published* below, which is also the one place the sequencing rule is deliberately not followed.
 
 **The bar:** a port with at least two plausible implementations, *one of which someone outside this repo might write*. The second clause does all the work. A scaffolded port lands at `<project>/backend/internal/…`, giving every generated project a structurally identical but distinct type at an `internal`-sealed import path — so no external implementation can exist at all. Publishing is justified only when that is the actual constraint, not merely when an interface looks reusable.
 
@@ -172,10 +172,15 @@ Candidates that clear the bar and are queued for publishing are tracked on the b
 | **OAuth** | **Already covered** | Another `auth.Resolver`, or a sibling port inside `auth/`. No new module needed. |
 | **Transactor** (`internal/database`) | **Conditional** | The transaction-boundary port is genuinely generic across Bun, pgx and sqlc. But nobody outside writes a transactor for someone else's project, so it fails the second clause of the bar. Revisit only if multi-backend support actually materialises. |
 
-### When `httpx` would have to be published
+### `httpx` is published
 
-The Auth Foundation design scaffolds `backend/internal/presentation/httpx` — the `huma.Register` wrapper that hands handlers a `*httpx.Ctx`. That is the right call while every feature pack is *generated into* a project.
+`httpx` — the `huma.Register` wrapper handing handlers a `*httpx.Ctx`, and the `Group` carrying a track's path prefix, OpenAPI tag and error policy — is a published package of this module, not scaffolded into generated projects.
 
-It stops being the right call the moment a feature pack ships as an installable module instead. A third-party Redis rate limiter, or a background worker's admin routes, would need `httpx.Register` to mount an endpoint — and `httpx` is scaffolded, so it is a different type at a different `internal`-sealed path in every project: exactly the problem publishing `auth/` solves. Publishing it is not free either, since `httpx` imports Huma and would tie a published contract's version to the API protocol engine.
+It was originally scaffolded, and this section previously recorded the publication as deferred until feature packs became installable modules rather than generated code. That deferral was lifted ahead of its own trigger: the reason to publish does not actually depend on the plugin system existing yet, only on the intent to have one. A scaffolded `httpx` is a structurally identical but *distinct* type at an `internal`-sealed path in every generated project, so a third-party feature pack — a Redis rate limiter, a background worker's admin routes — cannot mount an endpoint at all. That is the same constraint publishing `auth/` solved, and it is unfixable from outside a project by construction rather than by omission.
 
-So this is a decision deferred, not avoided: **if feature packs ever become installable modules rather than scaffolded code, `httpx` has to move into a published package first.** Directly relevant to the open plugin system issue on the board.
+Two costs are accepted deliberately, and both are real:
+
+- **A published contract pinned to the API protocol engine.** `httpx` imports Huma. `auth/` is stdlib-only precisely so a consuming project compiles none of this repo's dependency tree, and `httpx` does not have that property. A Huma major version becomes a gonext major version.
+- **The bar above is not met on its own terms.** The rule is that a port earns publication once its second implementation exists and someone outside the repo might plausibly write one. `httpx` has one implementation, so this is published on an architectural argument rather than an observed shape — the one deliberate exception to the sequencing rule, made because the alternative is not a worse abstraction but no extension point at all.
+
+Tracked as an open issue on the board; the package's shape depends on how the module split is resolved, since a Huma-importing package sits badly in a module whose selling point is a small dependency footprint.
