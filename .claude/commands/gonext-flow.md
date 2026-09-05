@@ -1,6 +1,6 @@
 ---
 description: "End-to-end gonext dev flow: brainstorm → plan → branch → TDD implementation → review → security → PR."
-argument-hint: "[idea, or a GitHub issue/PR link you paste in]"
+argument-hint: "[idea, a GitHub issue/PR link, or a path to an existing spec file]"
 ---
 
 # /gonext-flow
@@ -10,10 +10,63 @@ human approval gate. Each stage below is a delegation to an existing skill,
 agent, or command — this file only sequences them and decides routing
 (backend vs frontend vs both) based on files actually touched.
 
-**Input**: `$ARGUMENTS` — a feature idea in free text, or a GitHub issue/PR
-link the user pastes in when invoking this command (they bring the link;
-this command never guesses or searches one up). If empty, ask what to work
-on.
+**Input**: `$ARGUMENTS` — one of:
+
+- a feature idea in free text;
+- a GitHub issue/PR link the user pastes in (they bring the link; this
+  command never guesses or searches one up);
+- **a path to an existing spec file** (typically
+  `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md`).
+
+If empty, ask what to work on.
+
+**Entry point**: when the argument is a path to an existing spec file, when
+the user says the spec is already written, or when the argument is an issue
+whose board card is already in **Ready** — **skip Stage 1 entirely and start
+at Stage 2**. The spec is the output of Stage 1; handed one, that
+stage has nothing left to do. Before proceeding:
+
+1. Read the spec in full and restate its scope in two or three sentences.
+2. Confirm with the user that the spec is current and approved
+   (this replaces the Stage 1 hard gate — it is not waived, just already
+   satisfied by an approved document).
+3. Find the tracked issue for it and move its board card to **In Progress**
+   per *Board status* below.
+
+Do not re-run brainstorming over an approved spec; if reading it surfaces a
+genuine gap, raise the specific gap and ask whether to amend the spec file
+or proceed with a stated assumption.
+
+### Resolving the spec for an issue already in Ready
+
+**Ready** means the spec is approved (see *Board status*), so an issue in
+that column must have one. Find it in this order:
+
+1. **The issue's comments.** Look for the `spec: docs/superpowers/specs/<file>.md`
+   comment the spec convention posts (`issue_read` with `get_comments`).
+   That pointer wins over anything inferred.
+2. **Filename match.** Failing a comment, glob
+   `docs/superpowers/specs/*-design.md` and match the topic slug against the
+   issue title (and the current branch name, if one already exists for this
+   work). Accept a match only if it is unambiguous.
+
+**If neither resolves — or the comment names a path that is not on disk —
+STOP.** Do not fall back to Stage 1 and brainstorm a replacement, and do not
+proceed to Stage 2 without a spec. Report the issue number, the column it is
+in, and what was searched, then ask the user whether to:
+
+- run Stage 1 to write the missing spec (and move the card back), or
+- point at the right spec file, or
+- fix the stale `spec:` comment on the issue.
+
+A card in **Ready** with no findable spec is a bookkeeping error worth
+surfacing, not a gap to paper over.
+
+**Reading the column**: the GitHub MCP connection cannot read Projects v2
+fields any more than it can write them (see *Board status*). If `gh project
+item-list` is unavailable for lack of the `project` scope, treat the presence
+of a `spec:` comment on the issue as the signal that Stage 1 is already done,
+and say that is what you are going on.
 
 ---
 
@@ -27,7 +80,7 @@ Recorded here so routing is visible and intentional, not incidental:
 | Stage | Actor | Model | Why |
 |---|---|---|---|
 | 1 — Spec | `superpowers:brainstorming` (inline, main session) | whatever model the session is running | interactive dialogue with the user, no agent dispatch |
-| 2 — Plan | `/plan` inline, or `ecc:planner` agent | `opus` (`ecc:planner`'s declared default) | planning quality matters most where mistakes are expensive to unwind |
+| 2 — Plan | `ecc:planner` agent | `opus` (`ecc:planner`'s declared default) | planning quality matters most where mistakes are expensive to unwind |
 | 3 — Branch | `new-branch` skill (inline) | session model | trivial, no dispatch |
 | 4 — Implementation | `ecc:tdd-guide` | `sonnet` | high-volume, well-specified work once the plan is approved |
 | 4 — Build-fix (Go) | `ecc:go-build-resolver` | `sonnet` | mechanical error resolution |
@@ -43,6 +96,44 @@ If a stage's actual risk doesn't match this table for a given task (e.g. a
 mechanical), say so and bump that one stage to `opus` rather than silently
 using the default.
 
+## Board status (do this at every stage boundary)
+
+Status for this repo lives on the [project board](https://github.com/users/dennys-bd/projects/6),
+never in a file. The card for the tracked issue moves as the flow advances —
+this is part of the flow, not an afterthought at the end:
+
+| When | Column |
+|---|---|
+| Spec approved (end of Stage 1), or an already-approved spec handed in | **Ready** |
+| Branch created and implementation started (Stage 3 → 4) | **In Progress** |
+| PR opened (end of Stage 7) | **In Review** |
+| PR merged | **Done** |
+
+Rules:
+
+- Announce each move in chat as it happens (`board: #N → In Progress`), so
+  the user can see the card is tracking reality.
+- If no issue exists for the work, create one before Stage 3 and put it in
+  **Ready** — the flow always has a card to move.
+- Never batch the moves at the end. A card sitting in **Ready** while the
+  code is written is the failure this section exists to prevent.
+- Do not close the issue by hand; `Closes #N` in the PR body does it, and
+  merging is what drives **Done**.
+
+**Tooling caveat**: the GitHub MCP connection covers issues but not
+Projects v2 fields, so the column change is the one GitHub operation that
+goes through the `gh` CLI:
+
+```sh
+gh project item-list 6 --owner dennys-bd --format json   # find the item id
+gh project item-edit --id <item-id> --field-id <status-field-id> \
+  --project-id <project-id> --single-select-option-id <option-id>
+```
+
+This needs the `project` scope on the token (`gh auth refresh -s project`).
+If the scope is missing, say so once and ask the user to move the card
+themselves, naming the exact column — never silently skip the update.
+
 ## Stage 1 — Spec (human-in-the-loop, brainstorming only)
 
 Invoke the `superpowers:brainstorming` skill — **only this piece of
@@ -52,11 +143,18 @@ superpowers is in scope for this repo**, nothing else from that plugin.
 - All questions, approach trade-offs, and design go through chat with the
   user — this is the one stage the user actively drives.
 - Architectural path writes `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md`
-  and commits it (matches this repo's existing spec tree — do not redirect
-  specs to the GitHub project board; the board tracks status, not content).
+  (matches this repo's existing spec tree — do not redirect specs to the
+  GitHub project board; the board tracks status, not content). That tree is
+  gitignored, so the file is **not** committed.
+- Once the spec file is written, comment its path on the tracked issue
+  (`spec: docs/superpowers/specs/<file>.md`) via the GitHub MCP connection,
+  so the issue carries a pointer to where the design lives. The path is a
+  local breadcrumb, not a link anyone else can open — that is understood
+  and intended.
 - Bounded path: short in-chat design, explicit approval, no spec file.
 - **HARD GATE**: do not proceed to Stage 2 without explicit user approval
   of the design/spec.
+- On approval, move the card to **Ready**.
 
 ## Stage 2 — Plan
 
@@ -77,6 +175,8 @@ Stage 1 in-chat approval — no plan document needed.
 Invoke the `new-branch` skill (`.claude/skills/new-branch/SKILL.md`) to
 create a correctly named `feat/`, `fix/`, `docs/`, or `chore/` branch before
 any file changes.
+
+Once the branch exists, move the card to **In Progress**.
 
 ## Stage 4 — Implementation (TDD)
 
@@ -130,9 +230,10 @@ request against `main`, referencing the spec/plan/TDD-evidence artifacts
 from Stages 1, 2, and 4.
 
 After the PR is opened:
+- Move the card to **In Review**.
 - Close the tracked issue from the PR body (`Closes #N`). Status lives on
   the project board, never in a file — do not add status markers to
-  `roadmap.md`.
+  `roadmap.md`. The card reaches **Done** when the PR merges.
 - Only touch `roadmap.md` if the work changed a *design* decision (what a
   component is or why), not merely its completion state.
 - Issue and board operations go through the GitHub MCP connection, not the
@@ -143,6 +244,7 @@ After the PR is opened:
 ## Gates Summary (never skip)
 
 1. Spec/design approved by user (Stage 1) — HARD GATE, no exceptions.
+   Satisfied up front when the flow is entered with an approved spec file.
 2. Plan approved by user (Stage 2, architectural path only).
 3. Code review clean of CRITICAL/HIGH (Stage 5) before security scan.
 4. Security scan clean of CRITICAL/HIGH (Stage 6) before PR.
@@ -154,4 +256,5 @@ After the PR is opened:
   spec-writing piece of that plugin.
 - `gh` CLI for GitHub operations — this repo's Claude Code is wired to
   GitHub via the `github` MCP plugin; prefer that over shelling out to `gh`
-  when either path is available.
+  when either path is available. The single exception is moving a project
+  board card, which the MCP connection cannot do (see *Board status*).
