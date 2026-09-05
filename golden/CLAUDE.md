@@ -24,24 +24,62 @@ The `bru` CLI (`npm:@usebruno/cli`) is pinned in `.mise.toml` and provisioned by
 
 ## Guarding an endpoint
 
-Register every endpoint with `httpx.Register`, never `huma.Register` — the wrapper is what gives the handler a `*httpx.Ctx`, and a `forbidigo` lint rule enforces it.
-
-An operation declares what it needs in its `Security` field; the auth middleware enforces that before the handler runs, and injects the identity:
+Routes are registered on an `httpx.Group`, which owns the path prefix, the OpenAPI tag, and the error policy that every operation on the track shares. Never call `huma.Register` — a `forbidigo` lint rule forbids it, because the group and `httpx.Register` are what give a handler a `*httpx.Ctx`.
 
 ```go
-httpx.Register(api, huma.Operation{
-    OperationID: "delete-post",
-    Method:      http.MethodDelete,
-    Path:        "/posts/{id}",
-    Security:    auth.RequirePermission("posts:delete"),
-}, func(ctx *httpx.Ctx, in *deleteInput) (*struct{}, error) {
-    return nil, svc.Delete(ctx, ctx.Identity().UserID, in.ID)
-})
+func RegisterStub(api huma.API, svc *application.StubService, logger *slog.Logger) {
+    h := &handlers{svc: svc}
+    g := httpx.NewGroup(api, "/stubs", "Example", logger).Errors(
+        httpx.Map(domain.ErrStubNameRequired, http.StatusBadRequest),
+        httpx.Map(domain.ErrStubNotFound, http.StatusNotFound),
+    )
+
+    httpx.Post(g, "", "create-stub", h.createStub,
+        httpx.Summary("Create a stub"),
+        httpx.Status(http.StatusCreated),
+        httpx.Secured(auth.Required()))
+
+    httpx.Get(g, "/{id}", "get-stub", h.getStub,
+        httpx.Summary("Get a stub by id"))
+}
+```
+
+The verbs are `httpx.Get`, `Post`, `Put`, `Patch` and `Delete`. They take the group as their first argument rather than being methods on it because Go does not permit methods to have type parameters, and each route is generic over its own input and output types.
+
+The operation ID is explicit and positional, never derived: it becomes the generated TypeScript client's method name, so `api.createStub()` is worth writing by hand.
+
+**A collection-root route passes the empty string, not `"/"`.** The group composes `prefix + path` verbatim, so `"/"` yields `/stubs/` — a different route with different behaviour.
+
+Options are `httpx.Summary`, `Description`, `Status` (the default success status), `Secured`, and `Deprecated`.
+
+`NewGroup` requires a non-nil logger and panics at construction without one, so a wiring mistake fails the process at boot rather than surfacing as a panic on the 500 path mid-incident.
+
+### Errors
+
+A handler returns its error bare — `return nil, err` — and the group decides what the client sees, in this order:
+
+1. A sentinel declared in `Errors(...)`, matched with `errors.Is` in declaration order, becomes its declared status, and the client is sent **the sentinel's own message**. Declaration order is why the mappings are an ordered list and not a map: map iteration is randomised, so an error matching two sentinels would otherwise get a status that varied between requests.
+
+    Any context wrapped around the sentinel is dropped from the response and appears only in the log, so `fmt.Errorf("loading order %s: %w", id, domain.ErrOrderNotFound)` is safe to write — the same `%w` that adds an order id could just as easily add a connection string, and nothing here can tell the two apart. To send the client a message built at request time, declare a separate sentinel for that case, or return a `huma.ErrorNNN` directly, which step 2 passes through untouched.
+2. Otherwise an error already carrying a status — `huma.Error409Conflict(...)` returned directly — passes through, for a case not worth declaring on the group.
+3. Otherwise the error is logged with the request context and replaced by a flat 500 carrying none of its detail.
+
+Step 3 is why returning a bare error is safe, and it is not optional: Huma renders an error that carries no status by putting `err.Error()` into the response body, so without it a wrapped internal — database driver text included — would reach the client. Add a `Map` declaration for every domain sentinel that should be something other than a 500.
+
+`httpx.Register` remains available as the escape hatch for anything the group does not model; it takes a full `huma.Operation` and applies no error policy, so such a handler must return its own `huma.ErrorNNN`.
+
+### Security
+
+An operation declares what it needs through `httpx.Secured`; the auth middleware enforces that before the handler runs, and injects the identity:
+
+```go
+httpx.Delete(g, "/{id}", "delete-post", h.deletePost,
+    httpx.Secured(auth.RequirePermission("posts:delete")))
 ```
 
 | Declaration | Behaviour |
 |---|---|
-| *(no `Security` field)* | Public. The credential is never read, so there is no session lookup. |
+| *(no `httpx.Secured` option)* | Public. The credential is never read, so there is no session lookup. |
 | `auth.Required()` | Any valid session. 401 without one. |
 | `auth.RequireRole("admin")` | Exact role match. 401 without a session, 403 with the wrong role. |
 | `auth.RequirePermission("posts:delete")` | Permission held via the role. 401 without a session, 403 without the permission. |

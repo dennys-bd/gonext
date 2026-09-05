@@ -1,7 +1,7 @@
 package api
 
 import (
-	"net/http"
+	"log/slog"
 
 	"github.com/danielgtaylor/huma/v2"
 
@@ -16,16 +16,15 @@ type healthzOutput struct {
 
 // RegisterHealthz registers the cross-cutting GET /healthz liveness
 // check. No domain owns it.
-func RegisterHealthz(api huma.API) {
-	httpx.Register(api, huma.Operation{
-		OperationID: "healthz",
-		Method:      http.MethodGet,
-		Path:        "/healthz",
-		Summary:     "Health check",
-		Tags:        []string{"System"},
-	}, func(_ *httpx.Ctx, _ *struct{}) (*healthzOutput, error) {
-		out := &healthzOutput{}
-		out.Body.Status = "ok"
-		return out, nil
-	})
+func RegisterHealthz(api huma.API, logger *slog.Logger) {
+	g := httpx.NewGroup(api, "", "System", logger)
+
+	httpx.Get(g, "/healthz", "healthz", getHealthz,
+		httpx.Summary("Health check"))
+}
+
+func getHealthz(_ *httpx.Ctx, _ *struct{}) (*healthzOutput, error) {
+	out := &healthzOutput{}
+	out.Body.Status = "ok"
+	return out, nil
 }

@@ -26,7 +26,7 @@ func TestServer_RequestID_EchoedFromRequest(t *testing.T) {
 	var buf bytes.Buffer
 	logger := slog.New(slog.NewJSONHandler(&buf, nil))
 	e, humaAPI := NewServer(logger, noopResolver{}, ProvideAuthConfig())
-	RegisterHealthz(humaAPI)
+	RegisterHealthz(humaAPI, logger)
 
 	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
 	req.Header.Set(echo.HeaderXRequestID, "client-supplied-id")
@@ -43,7 +43,7 @@ func TestServer_RequestID_GeneratedWhenAbsent(t *testing.T) {
 	var buf bytes.Buffer
 	logger := slog.New(slog.NewJSONHandler(&buf, nil))
 	e, humaAPI := NewServer(logger, noopResolver{}, ProvideAuthConfig())
-	RegisterHealthz(humaAPI)
+	RegisterHealthz(humaAPI, logger)
 
 	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
 	rec := httptest.NewRecorder()
@@ -59,7 +59,7 @@ func TestServer_LoggingMiddleware_LogsRequestLine(t *testing.T) {
 	var buf bytes.Buffer
 	logger := slog.New(slog.NewJSONHandler(&buf, nil))
 	e, humaAPI := NewServer(logger, noopResolver{}, ProvideAuthConfig())
-	RegisterHealthz(humaAPI)
+	RegisterHealthz(humaAPI, logger)
 
 	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
 	rec := httptest.NewRecorder()

@@ -1,6 +1,8 @@
 package api
 
 import (
+	"io"
+	"log/slog"
 	"net/http"
 	"strings"
 	"testing"
@@ -10,7 +12,7 @@ import (
 
 func TestHealthz(t *testing.T) {
 	_, api := humatest.New(t)
-	RegisterHealthz(api)
+	RegisterHealthz(api, slog.New(slog.NewTextHandler(io.Discard, nil)))
 
 	resp := api.Get("/healthz")
 	if resp.Code != http.StatusOK {

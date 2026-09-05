@@ -30,9 +30,3 @@ linters:
       - path: _test\.go
         linters:
           - gocyclo
-      # toHTTPError returns (error, bool): the comma-ok idiom, where the
-      # bool reports recognition rather than failure.
-      - path: users/internal/presentation/users\.go
-        linters:
-          - revive
-        text: 'error-return'

@@ -3,7 +3,6 @@ package presentation
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -26,7 +25,7 @@ import (
 const secretDetail = "pq: relation users_email_key does not exist on host db-primary-01"
 
 // failingStore is a domain.Store whose user repository always fails
-// with an error the presentation layer has no mapping for.
+// with an error the users group has no mapping for.
 type failingStore struct {
 	domain.Store
 	users failingUserRepository
@@ -42,9 +41,9 @@ func (failingUserRepository) GetByEmail(context.Context, string) (domain.User, e
 	return domain.User{}, errors.New(secretDetail)
 }
 
-// huma renders a non-StatusError by copying err.Error() into the
-// response body, so an unhandled error must be replaced before it is
-// returned — not merely left for huma to turn into a 500.
+// The generic mapped/unmapped/ordering behaviour is proven once in
+// httpx/errors_test.go; this is the per-track assertion that the
+// users group is actually wired with a logger and does not leak.
 func TestUnhandledError_IsLoggedAndNotLeaked(t *testing.T) {
 	store := &failingStore{}
 	logs := &bytes.Buffer{}
@@ -71,49 +70,7 @@ func TestUnhandledError_IsLoggedAndNotLeaked(t *testing.T) {
 	if strings.Contains(body, secretDetail) {
 		t.Fatalf("expected the driver message not to reach the client, got %s", body)
 	}
-	if strings.Contains(body, "users:") || strings.Contains(body, "looking up user") {
-		t.Fatalf("expected no wrapped internals in the body, got %s", body)
-	}
-
-	// Explicitly check the field huma fills from err.Error().
-	var rendered struct {
-		Detail string `json:"detail"`
-		Errors []struct {
-			Message string `json:"message"`
-		} `json:"errors"`
-	}
-	decode(t, resp.Body.Bytes(), &rendered)
-	if rendered.Detail != "internal server error" {
-		t.Fatalf("expected a flat detail, got %q", rendered.Detail)
-	}
-	for _, e := range rendered.Errors {
-		if strings.Contains(e.Message, secretDetail) {
-			t.Fatalf("expected no leak in errors[].message, got %q", e.Message)
-		}
-	}
-
 	if !strings.Contains(logs.String(), secretDetail) {
 		t.Fatalf("expected the real error to be logged server-side, got %q", logs.String())
-	}
-}
-
-// The mapped domain errors keep their own messages — the generic
-// replacement applies only to errors with no mapping.
-func TestMappedError_KeepsItsDetail(t *testing.T) {
-	api := newTestAPI(t, "test")
-
-	resp := api.Post("/users/confirm-email", map[string]string{"token": "not-a-real-token"})
-	if resp.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d", resp.Code)
-	}
-
-	var body struct {
-		Detail string `json:"detail"`
-	}
-	if err := json.Unmarshal(resp.Body.Bytes(), &body); err != nil {
-		t.Fatalf("decoding response: %v", err)
-	}
-	if body.Detail != domain.ErrConfirmationTokenInvalid.Error() {
-		t.Fatalf("expected the domain message, got %q", body.Detail)
 	}
 }
