@@ -36,13 +36,18 @@ func runOpenAPI(args []string) int {
 		return 1
 	}
 
-	run := openapi.Write
 	if check {
-		run = openapi.Check
+		if err := openapi.Check(context.Background(), root); err != nil {
+			fmt.Fprintln(os.Stderr, "error:", err)
+			return 1
+		}
+		fmt.Println(openapi.DocumentPath, "is up to date")
+		return 0
 	}
-	if err := run(context.Background(), root); err != nil {
+	if err := openapi.Write(context.Background(), root); err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)
 		return 1
 	}
+	fmt.Println("wrote", openapi.DocumentPath)
 	return 0
 }
