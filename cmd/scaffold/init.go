@@ -117,6 +117,15 @@ func copyEnvFile(dest string) error {
 // the generated project's own migrate binary. Any failure here is
 // best-effort and reported to the caller as a warning, not a fatal
 // error.
+// databaseURLEnv is the variable the generated backend's config reads
+// its Postgres DSN from; defaultDatabaseURL matches the credentials
+// templates/docker-compose.yml's `db` service creates and the value
+// templates/.env.example documents.
+const (
+	databaseURLEnv     = "DATABASE_URL"
+	defaultDatabaseURL = "postgres://app:app@localhost:5432/app?sslmode=disable"
+)
+
 func bootstrapDatabase(ctx context.Context, dest string) error {
 	if err := xexec.Run(ctx, dest, "docker", "compose", "up", "-d", "db"); err != nil {
 		return fmt.Errorf("docker compose up: %w", err)
@@ -131,6 +140,14 @@ func bootstrapDatabase(ctx context.Context, dest string) error {
 		return fmt.Errorf("waiting for database: %w", err)
 	}
 
+	// The migration runner loads config.Config, which requires
+	// DATABASE_URL; nothing has set it this early in a fresh project,
+	// so point it at the database docker-compose.yml just started.
+	if os.Getenv(databaseURLEnv) == "" {
+		if err := os.Setenv(databaseURLEnv, defaultDatabaseURL); err != nil {
+			return fmt.Errorf("setting %s: %w", databaseURLEnv, err)
+		}
+	}
 	if err := migrate.Apply(ctx, dest); err != nil {
 		return fmt.Errorf("running migration: %w", err)
 	}

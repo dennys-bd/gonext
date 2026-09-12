@@ -52,7 +52,7 @@ db-down: ## Stop local Postgres
 	docker compose down
 
 migrate-up: ## Apply pending database migrations against DATABASE_URL
-	gonext migrate
+	DATABASE_URL=$(DATABASE_URL) gonext migrate
 
 smoke: ## Migrate a local Postgres, build/run the server, run the Bruno collection against it, then stop everything
 	@docker compose up -d db; \
