@@ -23,7 +23,11 @@ export function LoginForm() {
           autoComplete="current-password"
           required
         />
-        {state.error && <Text c="red">{state.error}</Text>}
+        {state.error && (
+          <Text c="red" role="alert">
+            {state.error}
+          </Text>
+        )}
         <Button type="submit" loading={pending}>
           Log in
         </Button>

@@ -19,7 +19,13 @@ export const SESSION_COOKIE = "session";
 // browser, and the relay only runs on the server.
 const DEFAULT_API_URL = "http://localhost:8080";
 
-type SameSite = "lax" | "strict" | "none";
+const SAME_SITE_VALUES = ["lax", "strict", "none"] as const;
+type SameSite = (typeof SAME_SITE_VALUES)[number];
+
+function toSameSite(value: string): SameSite | undefined {
+  const lowered = value.toLowerCase();
+  return SAME_SITE_VALUES.find((v) => v === lowered);
+}
 
 // Attributes cookie.go emits, in the shape cookies().set() accepts.
 export type SessionCookie = {
@@ -38,6 +44,9 @@ function splitPair(pair: string): [string, string] {
   return at === -1 ? [pair, ""] : [pair.slice(0, at), pair.slice(at + 1)];
 }
 
+// Handles exactly the attributes cookie.go emits; anything else (Domain,
+// Partitioned, …) is dropped here, so extend this switch when Go's cookie
+// policy grows.
 function withAttribute(cookie: SessionCookie, attr: string): SessionCookie {
   const [key, value] = splitPair(attr);
   switch (key.toLowerCase()) {
@@ -52,7 +61,7 @@ function withAttribute(cookie: SessionCookie, attr: string): SessionCookie {
     case "secure":
       return { ...cookie, secure: true };
     case "samesite":
-      return { ...cookie, sameSite: value.toLowerCase() as SameSite };
+      return { ...cookie, sameSite: toSameSite(value) };
     default:
       return cookie;
   }
