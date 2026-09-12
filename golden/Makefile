@@ -1,18 +1,21 @@
 .PHONY: run build test vet tidy generate generate-check openapi openapi-check smoke lint vulncheck db-up db-down frontend-dev frontend-build frontend-test frontend-lint frontend-typecheck frontend-audit secrets-scan hooks-install
 
+ENV ?= dev
+PORT ?= 8080
+TEST_DATABASE_URL ?= postgres://app:app@localhost:5432/app_test?sslmode=disable
+
 run: ## Run the backend server (config from .env), rebuilding and restarting on change
 	gonext dev
 
 build: ## Build all backend packages
 	mise exec -- go build ./...
 
-test: ## Bring up Postgres, migrate the test database (TEST_DATABASE_URL from .env), run all backend tests, then tear down
-	@set -a; . ./.env; set +a; \
-	docker compose up -d db; \
+test: ## Bring up Postgres, migrate the test database, run all backend tests, then tear down
+	@docker compose up -d db; \
 	until docker compose exec -T db pg_isready -U app -d app >/dev/null 2>&1; do sleep 1; done; \
 	trap 'docker compose down' EXIT; \
-	DATABASE_URL=$$TEST_DATABASE_URL gonext migrate && \
-	mise exec -- go test -race ./...
+	DATABASE_URL=$(TEST_DATABASE_URL) gonext migrate && \
+	TEST_DATABASE_URL=$(TEST_DATABASE_URL) mise exec -- go test -race ./...
 
 vet: ## Run go vet on the backend
 	mise exec -- go vet ./...
@@ -47,14 +50,14 @@ db-up: ## Start local Postgres via docker compose
 db-down: ## Stop local Postgres
 	docker compose down
 
-smoke: ## Migrate a local Postgres, build/run the server (config from .env), run the Bruno collection against it, then stop everything
+smoke: ## Migrate a local Postgres (DATABASE_URL from .env), build/run the server, run the Bruno collection against it, then stop everything
 	@set -a; . ./.env; set +a; \
 	docker compose up -d db; \
 	until docker compose exec -T db pg_isready -U app -d app >/dev/null 2>&1; do sleep 1; done; \
 	gonext migrate && \
-	lsof -ti tcp:$$PORT | xargs -r kill 2>/dev/null; \
+	lsof -ti tcp:$(PORT) | xargs -r kill 2>/dev/null; \
 	go build -o /tmp/backend-smoke-server ./backend || exit 1; \
-	/tmp/backend-smoke-server & \
+	ENV=$(ENV) PORT=$(PORT) /tmp/backend-smoke-server & \
 	SERVER_PID=$$!; \
 	trap 'kill $$SERVER_PID 2>/dev/null; rm -f /tmp/backend-smoke-server; docker compose down' EXIT; \
 	sleep 1; \
