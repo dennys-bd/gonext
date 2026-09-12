@@ -31,6 +31,11 @@ func runOpenAPI(args []string) int {
 		return 1
 	}
 
+	if err := project.LoadEnv(root); err != nil {
+		fmt.Fprintln(os.Stderr, "error:", err)
+		return 1
+	}
+
 	run := openapi.Write
 	if check {
 		run = openapi.Check
