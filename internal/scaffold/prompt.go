@@ -50,3 +50,26 @@ func PromptSlug() (string, error) {
 	}
 	return name, nil
 }
+
+// PromptAgents interactively asks which agent tool files to
+// scaffold. Nothing is pre-selected; Codex is listed only so the
+// developer sees it is already covered by AGENTS.md.
+func PromptAgents() ([]string, error) {
+	var picked []string
+	options := make([]huh.Option[string], 0, len(AgentNames()))
+	for _, name := range AgentNames() {
+		label := name
+		if name == "codex" {
+			label = "codex (reads AGENTS.md — already covered)"
+		}
+		options = append(options, huh.NewOption(label, name))
+	}
+	field := huh.NewMultiSelect[string]().
+		Title("Agent tooling?").
+		Options(options...).
+		Value(&picked)
+	if err := huh.NewForm(huh.NewGroup(field)).Run(); err != nil {
+		return nil, err
+	}
+	return picked, nil
+}

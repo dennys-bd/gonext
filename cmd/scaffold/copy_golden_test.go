@@ -49,7 +49,7 @@ const goldenDir = "../../golden"
 func TestCopy_GoldenSnapshot(t *testing.T) {
 	dest := t.TempDir()
 
-	if err := scaffold.Copy(gonext.Templates, "templates", dest, goldenSlug); err != nil {
+	if err := scaffold.Copy(gonext.Templates, "templates", dest, goldenSlug, nil); err != nil {
 		t.Fatalf("Copy: unexpected error: %v", err)
 	}
 

@@ -28,7 +28,7 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: gonext init <name> [path]")
+	fmt.Fprintln(os.Stderr, "usage: gonext init <name> [path] [--agents=<list>]")
 	fmt.Fprintln(os.Stderr, "       gonext migrate")
 	fmt.Fprintln(os.Stderr, "       gonext dev")
 	fmt.Fprintln(os.Stderr, "       gonext openapi [--check]")

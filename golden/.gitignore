@@ -1,4 +1,4 @@
-# OMC operational state (not committed; see CLAUDE.md worktree_paths)
+# OMC operational state (not committed)
 .omc/
 
 # Per-machine Claude Code overrides (e.g. graphify's PreToolUse hooks), not shared

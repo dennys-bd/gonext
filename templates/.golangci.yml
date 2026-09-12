@@ -19,7 +19,7 @@ linters:
     forbidigo:
       forbid:
         - pattern: '^huma\.Register$'
-          msg: use httpx.Register so the handler receives *httpx.Ctx (see CLAUDE.md, "Guarding an endpoint")
+          msg: use httpx.Register so the handler receives *httpx.Ctx (see AGENTS.md, "Guarding an endpoint")
   exclusions:
     rules:
       - path: internal/presentation/httpx/
