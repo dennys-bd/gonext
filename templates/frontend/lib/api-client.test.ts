@@ -102,6 +102,19 @@ describe("createClientConfig", () => {
     });
   });
 
+  it("ignores Set-Cookie headers for anything but the session cookie", async () => {
+    const headers = new Headers();
+    headers.append("set-cookie", "tracking=1; Path=/");
+    headers.append("set-cookie", "session=xyz; Path=/; HttpOnly");
+
+    await relay(new Response(null, { status: 200, headers }));
+
+    expect(cookieStore.set).toHaveBeenCalledTimes(1);
+    expect(cookieStore.set).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "session", value: "xyz" }),
+    );
+  });
+
   it("never touches the cookie store when the backend sets no cookie", async () => {
     await relay(new Response(null, { status: 200 }));
 

@@ -96,7 +96,11 @@ async function applySetCookies(response: Response): Promise<void> {
   if (headers.length === 0) return;
   const store = await cookies();
   for (const header of headers) {
-    store.set(parseSetCookie(header));
+    const cookie = parseSetCookie(header);
+    // The relay's trust boundary: only the session cookie crosses to the
+    // browser, whatever else the backend may set.
+    if (cookie.name !== SESSION_COOKIE) continue;
+    store.set(cookie);
   }
 }
 
