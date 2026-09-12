@@ -49,7 +49,7 @@ func run() error {
 	}
 
 	ctx := context.Background()
-	if err := xexec.Run(ctx, ".", "go", "run", "./cmd/scaffold", "init", goldenSlug, "./"+goldenDirName); err != nil {
+	if err := xexec.Run(ctx, ".", "go", "run", "./cmd/scaffold", "init", goldenSlug, "./"+goldenDirName, "--agents=none"); err != nil {
 		return fmt.Errorf("generating %s: %w", goldenDirName, err)
 	}
 	return nil

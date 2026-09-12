@@ -1,0 +1,5 @@
+---
+description: Project guardrails — read AGENTS.md
+alwaysApply: true
+---
+Guardrails for this project live in `AGENTS.md` at the repository root. Read it in full before changing anything.

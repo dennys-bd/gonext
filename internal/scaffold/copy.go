@@ -38,8 +38,15 @@ const generatedFileMode = 0o644
 // Copy walks the tree rooted at root within fsys and writes every
 // file to dest. Text files have every occurrence of the
 // [PROJECT-NAME] token replaced with slug; files detected as binary
-// are copied verbatim.
-func Copy(fsys fs.FS, root, dest, slug string) error {
+// are copied verbatim. agents selects which agent-tool-owned paths
+// (see agentPaths) are written; a path owned by no tool is always
+// written regardless of agents.
+func Copy(fsys fs.FS, root, dest, slug string, agents []string) error {
+	selected := make(map[string]bool, len(agents))
+	for _, agent := range agents {
+		selected[agent] = true
+	}
+
 	return fs.WalkDir(fsys, root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -50,6 +57,13 @@ func Copy(fsys fs.FS, root, dest, slug string) error {
 			return err
 		}
 		target := filepath.Join(dest, rel)
+
+		if skipsAgentPath(filepath.ToSlash(rel), selected) {
+			if d.IsDir() {
+				return fs.SkipDir
+			}
+			return nil
+		}
 
 		if d.IsDir() {
 			return os.MkdirAll(target, 0o755)

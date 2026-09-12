@@ -15,7 +15,7 @@ var fixtureFS embed.FS
 func TestCopy_SubstitutesTextFiles(t *testing.T) {
 	dest := t.TempDir()
 
-	if err := Copy(fixtureFS, "testdata/fixture", dest, "my-app"); err != nil {
+	if err := Copy(fixtureFS, "testdata/fixture", dest, "my-app", nil); err != nil {
 		t.Fatalf("Copy: unexpected error: %v", err)
 	}
 
@@ -51,7 +51,7 @@ func TestCopy_SubstitutesTextFiles(t *testing.T) {
 func TestCopy_NoTokenSurvives(t *testing.T) {
 	dest := t.TempDir()
 
-	if err := Copy(fixtureFS, "testdata/fixture", dest, "my-app"); err != nil {
+	if err := Copy(fixtureFS, "testdata/fixture", dest, "my-app", nil); err != nil {
 		t.Fatalf("Copy: unexpected error: %v", err)
 	}
 
@@ -79,7 +79,7 @@ func TestCopy_NoTokenSurvives(t *testing.T) {
 func TestCopy_BinaryFileUnchanged(t *testing.T) {
 	dest := t.TempDir()
 
-	if err := Copy(fixtureFS, "testdata/fixture", dest, "my-app"); err != nil {
+	if err := Copy(fixtureFS, "testdata/fixture", dest, "my-app", nil); err != nil {
 		t.Fatalf("Copy: unexpected error: %v", err)
 	}
 
@@ -99,7 +99,7 @@ func TestCopy_BinaryFileUnchanged(t *testing.T) {
 func TestCopy_WritesWritableFiles(t *testing.T) {
 	dest := t.TempDir()
 
-	if err := Copy(fixtureFS, "testdata/fixture", dest, "my-app"); err != nil {
+	if err := Copy(fixtureFS, "testdata/fixture", dest, "my-app", nil); err != nil {
 		t.Fatalf("Copy: unexpected error: %v", err)
 	}
 
@@ -132,7 +132,7 @@ func TestCopy_SkipsGoModAndGoSum(t *testing.T) {
 	}
 
 	dest := t.TempDir()
-	if err := Copy(os.DirFS(src), ".", dest, "my-app"); err != nil {
+	if err := Copy(os.DirFS(src), ".", dest, "my-app", nil); err != nil {
 		t.Fatalf("Copy: unexpected error: %v", err)
 	}
 
@@ -143,5 +143,41 @@ func TestCopy_SkipsGoModAndGoSum(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(dest, "main.go")); err != nil {
 		t.Errorf("expected main.go to still be copied: %v", err)
+	}
+}
+
+func TestCopy_SkipsUnselectedAgentPaths(t *testing.T) {
+	src := t.TempDir()
+	files := map[string]string{
+		"AGENTS.md":                       "guardrails\n",
+		"CLAUDE.md":                       "pointer\n",
+		".claude/settings.json":           "{}\n",
+		".github/workflows/ci.yml":        "on: push\n",
+		".github/copilot-instructions.md": "pointer\n",
+	}
+	for rel, content := range files {
+		full := filepath.Join(src, filepath.FromSlash(rel))
+		if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+			t.Fatalf("setup: %v", err)
+		}
+		if err := os.WriteFile(full, []byte(content), 0o644); err != nil {
+			t.Fatalf("setup: %v", err)
+		}
+	}
+
+	dest := t.TempDir()
+	if err := Copy(os.DirFS(src), ".", dest, "my-app", []string{"copilot"}); err != nil {
+		t.Fatalf("Copy: unexpected error: %v", err)
+	}
+
+	for _, rel := range []string{"AGENTS.md", ".github/workflows/ci.yml", ".github/copilot-instructions.md"} {
+		if _, err := os.Stat(filepath.Join(dest, filepath.FromSlash(rel))); err != nil {
+			t.Errorf("expected %s to be copied: %v", rel, err)
+		}
+	}
+	for _, rel := range []string{"CLAUDE.md", ".claude"} {
+		if _, err := os.Stat(filepath.Join(dest, filepath.FromSlash(rel))); !os.IsNotExist(err) {
+			t.Errorf("expected %s to be skipped by Copy, but it exists at %s", rel, dest)
+		}
 	}
 }

@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	gonext "github.com/dennys-bd/gonext"
 	xexec "github.com/dennys-bd/gonext/internal/exec"
@@ -15,21 +16,36 @@ import (
 	"github.com/dennys-bd/gonext/internal/scaffold"
 )
 
-// runInit implements `gonext init [name] [path]` and returns the
-// process exit code.
+// runInit implements `gonext init [name] [path] [--agents=<list>]` and
+// returns the process exit code.
 func runInit(args []string) int {
-	var name, path string
-	if len(args) > 0 {
-		name = args[0]
+	name, path, agentsArg, agentsSet, err := parseInitArgs(args)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "error:", err)
+		return 1
 	}
-	if len(args) > 1 {
-		path = args[1]
+
+	var agents []string
+	if agentsSet {
+		agents, err = scaffold.ParseAgents(agentsArg)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "error:", err)
+			return 1
+		}
 	}
 
 	slug, err := resolveSlug(name)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)
 		return 1
+	}
+
+	if !agentsSet && scaffold.IsTTY() {
+		agents, err = scaffold.PromptAgents()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "error:", err)
+			return 1
+		}
 	}
 
 	dest, err := scaffold.ResolveDest(slug, path)
@@ -42,7 +58,7 @@ func runInit(args []string) int {
 		return 1
 	}
 
-	if err := scaffold.Copy(gonext.Templates, "templates", dest, slug); err != nil {
+	if err := scaffold.Copy(gonext.Templates, "templates", dest, slug, agents); err != nil {
 		fmt.Fprintln(os.Stderr, "error: copying templates:", err)
 		return 1
 	}
@@ -84,6 +100,35 @@ func runInit(args []string) int {
 	fmt.Println("  cd", dest)
 
 	return 0
+}
+
+// parseInitArgs splits args into the positional name/path and the
+// --agents=<list> flag, which may appear anywhere among them. A
+// stdlib flag.FlagSet was rejected because it stops parsing at the
+// first positional argument, which would silently ignore
+// `gonext init my-app --agents=claude`. Any other `--`-prefixed
+// argument is a usage error; extra positionals beyond name and path
+// are ignored, matching prior behaviour.
+func parseInitArgs(args []string) (name, path, agents string, agentsSet bool, err error) {
+	var positionals []string
+	for _, arg := range args {
+		if rest, ok := strings.CutPrefix(arg, "--agents="); ok {
+			agents = rest
+			agentsSet = true
+			continue
+		}
+		if strings.HasPrefix(arg, "--") {
+			return "", "", "", false, fmt.Errorf("unknown flag %q", arg)
+		}
+		positionals = append(positionals, arg)
+	}
+	if len(positionals) > 0 {
+		name = positionals[0]
+	}
+	if len(positionals) > 1 {
+		path = positionals[1]
+	}
+	return name, path, agents, agentsSet, nil
 }
 
 // resolveSlug obtains and validates the project slug from name,
