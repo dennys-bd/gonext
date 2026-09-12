@@ -28,16 +28,10 @@ generate-check: ## Fail if wire_gen.go is stale relative to wire.go (fix with `m
 	mise exec -- wire diff ./backend/...
 
 openapi: ## Regenerate docs/openapi.yaml and the typed frontend client
-	mise exec -- go run ./backend --openapi > docs/openapi.yaml
-	mise exec -- pnpm --dir frontend codegen
+	gonext openapi
 
 openapi-check: ## Fail if docs/openapi.yaml is stale (fix with `make openapi`)
-	@tmp=$$(mktemp); \
-	mise exec -- go run ./backend --openapi > $$tmp; \
-	diff -u docs/openapi.yaml $$tmp; \
-	status=$$?; \
-	rm -f $$tmp; \
-	exit $$status
+	gonext openapi --check
 
 lint: ## Run golangci-lint on the backend
 	mise exec -- golangci-lint run ./...

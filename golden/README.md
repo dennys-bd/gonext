@@ -37,7 +37,7 @@ The frontend calls the backend only from Next's server (server components and se
 
 ## API contract
 
-`docs/openapi.yaml` is produced from the backend's route registrations with no database or environment needed:
+`docs/openapi.yaml` is produced by `gonext openapi` from the backend's route registrations, with no database or environment needed:
 
 ```bash
 make openapi         # regenerate docs/openapi.yaml and frontend/lib/api/

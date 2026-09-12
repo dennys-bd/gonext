@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/dennys-bd/gonext/internal/migrate"
+	"github.com/dennys-bd/gonext/internal/project"
 )
 
 // debounceWindow is the fixed burst-collapsing window for the
@@ -59,11 +59,11 @@ func (l *runLoop) run(ctx context.Context, backendRoot string, window time.Durat
 // nearest ancestor go.mod, then runs the watch-build-restart loop
 // against <root>/backend until ctx is cancelled.
 func Run(ctx context.Context, fsys fs.FS, cwd string) error {
-	root, err := migrate.ResolveRoot(cwd)
+	root, err := project.ResolveRoot(cwd)
 	if err != nil {
 		return fmt.Errorf("resolving project root: %w", err)
 	}
-	modulePath, err := migrate.ModulePath(root)
+	modulePath, err := project.ModulePath(root)
 	if err != nil {
 		return fmt.Errorf("reading module path: %w", err)
 	}

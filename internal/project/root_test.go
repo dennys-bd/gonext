@@ -1,4 +1,4 @@
-package migrate
+package project
 
 import (
 	"os"

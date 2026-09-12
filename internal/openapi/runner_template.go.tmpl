@@ -1,0 +1,74 @@
+// Command gonext-openapi-runner is a temporary file materialized by
+// `gonext openapi` to print the generated project's OpenAPI document
+// to stdout. It is deleted immediately after running and should never
+// be committed.
+//
+// It builds the project's API over infrastructure that never
+// connects: a fixed production-shaped config instead of config.Load
+// (so the document depends only on the route registrations, never on
+// whoever's shell produced it), a logger writing nowhere (stdout is
+// the document), and a *bun.DB whose connector refuses to dial.
+// Registration only constructs repositories that hold the handle;
+// nothing queries until a request is served, and none ever is.
+package main
+
+import (
+	"context"
+	"database/sql"
+	"database/sql/driver"
+	"errors"
+	"fmt"
+	"io"
+	"log/slog"
+	"os"
+	"time"
+
+	"github.com/uptrace/bun"
+	"github.com/uptrace/bun/dialect/pgdialect"
+
+	"[MODULE-PATH]/backend/internal/config"
+	"[MODULE-PATH]/backend/internal/openapi"
+)
+
+var errOffline = errors.New("gonext openapi: registration must not touch the database")
+
+// offlineConnector is a driver.Connector that refuses to connect, so
+// the *bun.DB built over it never dials, pings, or retries.
+type offlineConnector struct{}
+
+func (offlineConnector) Connect(context.Context) (driver.Conn, error) { return nil, errOffline }
+func (offlineConnector) Driver() driver.Driver                        { return offlineDriver{} }
+
+type offlineDriver struct{}
+
+func (offlineDriver) Open(string) (driver.Conn, error) { return nil, errOffline }
+
+func main() {
+	// Env is "prod" on purpose: users.Register derives cookie policy
+	// and relaxed-environment behaviour from it, and the published
+	// contract should describe the production shape.
+	cfg := config.Config{
+		Env:             "prod",
+		Port:            8080,
+		LogLevel:        "info",
+		LogFormat:       "json",
+		ShutdownTimeout: 10 * time.Second,
+	}
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	db := bun.NewDB(sql.OpenDB(offlineConnector{}), pgdialect.New())
+
+	spec, err := openapi.Initialize(cfg, logger, db)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "building api: %v\n", err)
+		os.Exit(1)
+	}
+	doc, err := spec.API.OpenAPI().YAML()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "rendering openapi document: %v\n", err)
+		os.Exit(1)
+	}
+	if _, err := os.Stdout.Write(doc); err != nil {
+		fmt.Fprintf(os.Stderr, "writing openapi document: %v\n", err)
+		os.Exit(1)
+	}
+}

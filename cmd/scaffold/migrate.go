@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/dennys-bd/gonext/internal/migrate"
+	"github.com/dennys-bd/gonext/internal/project"
 )
 
 // runMigrate implements `gonext migrate` and returns the process
@@ -18,7 +19,7 @@ func runMigrate(args []string) int {
 		return 1
 	}
 
-	root, err := migrate.ResolveRoot(cwd)
+	root, err := project.ResolveRoot(cwd)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)
 		return 1

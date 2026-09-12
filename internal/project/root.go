@@ -1,8 +1,9 @@
-// Package migrate applies a generated project's pending Postgres
-// migrations from this repo, without vendoring the migrate command
-// into every scaffolded project (see templates/backend/cmd/migrate,
-// which this package replaces).
-package migrate
+// Package project locates a generated project from the current
+// directory and materializes the temporary runner files that
+// CLI-native subcommands (gonext migrate, gonext openapi) `go run`
+// inside it — so those capabilities live in this repo instead of
+// being vendored into every scaffolded project.
+package project
 
 import (
 	"bufio"

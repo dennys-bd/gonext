@@ -19,6 +19,8 @@ func main() {
 		os.Exit(runMigrate(os.Args[2:]))
 	case "dev":
 		os.Exit(runDev(os.Args[2:]))
+	case "openapi":
+		os.Exit(runOpenAPI(os.Args[2:]))
 	default:
 		usage()
 		os.Exit(1)
@@ -29,4 +31,5 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "usage: gonext init <name> [path]")
 	fmt.Fprintln(os.Stderr, "       gonext migrate")
 	fmt.Fprintln(os.Stderr, "       gonext dev")
+	fmt.Fprintln(os.Stderr, "       gonext openapi [--check]")
 }
