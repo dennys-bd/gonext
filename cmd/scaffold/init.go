@@ -75,7 +75,7 @@ func runInit(args []string) int {
 
 	if err := bootstrapDatabase(ctx, dest); err != nil {
 		fmt.Println("warning: database bootstrap failed:", err)
-		fmt.Println("  run manually: make db-up && make migrate-up")
+		fmt.Println("  run manually: make db-up && gonext migrate")
 	}
 
 	fmt.Println()

@@ -1,4 +1,4 @@
-.PHONY: run build test vet tidy generate generate-check openapi openapi-check smoke lint vulncheck db-up db-down migrate-up frontend-dev frontend-build frontend-test frontend-lint frontend-typecheck frontend-audit secrets-scan hooks-install
+.PHONY: run build test vet tidy generate generate-check openapi openapi-check smoke lint vulncheck db-up db-down frontend-dev frontend-build frontend-test frontend-lint frontend-typecheck frontend-audit secrets-scan hooks-install
 
 ENV ?= dev
 PORT ?= 8080
@@ -50,9 +50,6 @@ db-up: ## Start local Postgres via docker compose
 
 db-down: ## Stop local Postgres
 	docker compose down
-
-migrate-up: ## Apply pending database migrations (DATABASE_URL from .env)
-	gonext migrate
 
 smoke: ## Migrate a local Postgres, build/run the server, run the Bruno collection against it, then stop everything
 	@docker compose up -d db; \

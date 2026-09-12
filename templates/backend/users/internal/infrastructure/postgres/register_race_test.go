@@ -24,7 +24,7 @@ func TestRegister_ConcurrentSameEmail_Postgres(t *testing.T) {
 
 	dsn := os.Getenv("TEST_DATABASE_URL")
 	if dsn == "" {
-		t.Skip("TEST_DATABASE_URL not set; run `make db-up` and `make migrate-up` against it to run this test")
+		t.Skip("TEST_DATABASE_URL not set; run `make db-up` and `gonext migrate` against it to run this test")
 	}
 
 	ctx := context.Background()
