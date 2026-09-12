@@ -8,3 +8,6 @@ openapi: ## Regenerate templates/docs/openapi.yaml from golden/ with the working
 
 install: ## Build the working-tree CLI into ~/go/bin/gonext
 	go build -o ~/go/bin/gonext ./cmd/scaffold
+
+test: ## Build, vet and race-test every package that builds standalone (templates/ never does)
+	go build ./auth/... ./cmd/... ./dbmigrate/... ./internal/... . && go vet ./auth/... ./cmd/... ./dbmigrate/... ./internal/... . && go test -race ./auth/... ./cmd/... ./dbmigrate/... ./internal/... .

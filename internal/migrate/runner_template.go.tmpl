@@ -9,12 +9,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/uptrace/bun/migrate"
+	"github.com/dennys-bd/gonext/dbmigrate"
 
 	"[MODULE-PATH]/backend/internal/config"
 	"[MODULE-PATH]/backend/internal/database"
-	"[MODULE-PATH]/backend/internal/database/migrations"
-)
+[MIGRATION-IMPORTS])
 
 func main() {
 	cfg, err := config.Load()
@@ -31,20 +30,15 @@ func main() {
 	}
 	defer db.Close()
 
-	migrator := migrate.NewMigrator(db, migrations.Migrations)
-	if err := migrator.Init(ctx); err != nil {
-		fmt.Fprintf(os.Stderr, "initializing migration tables: %v\n", err)
-		os.Exit(1)
+	applied, err := dbmigrate.Apply(ctx, db)
+	for _, m := range applied {
+		fmt.Printf("applied %s/%s %s\n", m.Domain, m.Version, m.Name)
 	}
-
-	group, err := migrator.Migrate(ctx)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "running migrations: %v\n", err)
 		os.Exit(1)
 	}
-	if group.IsZero() {
+	if len(applied) == 0 {
 		fmt.Println("no new migrations to run")
-		return
 	}
-	fmt.Printf("migrated to %s\n", group)
 }

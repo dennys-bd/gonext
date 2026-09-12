@@ -196,9 +196,9 @@ Route build-error resolution by the area touched:
 
 Standard validation commands (from `CLAUDE.md` / `make check`):
 ```sh
-go build ./auth/... ./cmd/... ./internal/... .
-go vet ./auth/... ./cmd/... ./internal/... .
-go test -race ./auth/... ./cmd/... ./internal/... .
+go build ./auth/... ./cmd/... ./dbmigrate/... ./internal/... .
+go vet ./auth/... ./cmd/... ./dbmigrate/... ./internal/... .
+go test -race ./auth/... ./cmd/... ./dbmigrate/... ./internal/... .
 ```
 plus the frontend project's `pnpm typecheck` / `pnpm lint` / `pnpm test` as
 applicable. If `templates/` changed, run `make golden` and confirm
