@@ -12,6 +12,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: jdx/mise-action@v2
+      - run: cp .env.example .env
       - run: make vet
       - run: make lint
       - run: make generate-check
@@ -47,4 +48,5 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: jdx/mise-action@v2
+      - run: cp .env.example .env
       - run: make smoke
