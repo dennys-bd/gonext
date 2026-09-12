@@ -46,7 +46,9 @@ func RegisterStub(api huma.API, svc *application.StubService, logger *slog.Logge
 
 The verbs are `httpx.Get`, `Post`, `Put`, `Patch` and `Delete`. They take the group as their first argument rather than being methods on it because Go does not permit methods to have type parameters, and each route is generic over its own input and output types.
 
-The operation ID is explicit and positional, never derived: it becomes the generated TypeScript client's method name, so `api.createStub()` is worth writing by hand.
+The operation ID is explicit and positional, never derived: it becomes the generated TypeScript client's method name under the group's tag, so `create-stub` on the `Example` group is `api.example.createStub()` in the frontend. Renaming one is a frontend-breaking change — treat operation IDs with the care of any exported name.
+
+After changing any registration, run `make openapi` (`gonext openapi`) and commit `docs/openapi.yaml`: it is the committed contract, `make openapi-check` fails CI when it is stale, and the frontend's `lib/api/` is regenerated from it on `pnpm install` (never edit or commit `lib/api/`). The document is produced with no database or environment through `backend/internal/openapi.Initialize`, the injector that registers every domain — add new domains there as well as in `backend/wire.go`.
 
 **A collection-root route passes the empty string, not `"/"`.** The group composes `prefix + path` verbatim, so `"/"` yields `/stubs/` — a different route with different behaviour.
 

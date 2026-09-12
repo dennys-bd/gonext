@@ -1,4 +1,4 @@
-.PHONY: run build test vet tidy generate generate-check smoke lint vulncheck db-up db-down migrate-up frontend-dev frontend-build frontend-test frontend-lint frontend-typecheck frontend-audit secrets-scan hooks-install
+.PHONY: run build test vet tidy generate generate-check openapi openapi-check smoke lint vulncheck db-up db-down migrate-up frontend-dev frontend-build frontend-test frontend-lint frontend-typecheck frontend-audit secrets-scan hooks-install
 
 ENV ?= dev
 PORT ?= 8080
@@ -26,6 +26,12 @@ generate: ## Regenerate wire_gen.go from the wire.go injector declarations
 
 generate-check: ## Fail if wire_gen.go is stale relative to wire.go (fix with `make generate`)
 	mise exec -- wire diff ./backend/...
+
+openapi: ## Regenerate docs/openapi.yaml and the typed frontend client
+	gonext openapi
+
+openapi-check: ## Fail if docs/openapi.yaml is stale (fix with `make openapi`)
+	gonext openapi --check
 
 lint: ## Run golangci-lint on the backend
 	mise exec -- golangci-lint run ./...

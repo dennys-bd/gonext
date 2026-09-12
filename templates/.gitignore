@@ -39,6 +39,7 @@ go.work.sum
 # deleted immediately after — should never be committed if a crash
 # leaves it behind.
 /backend/gonext_migrate_runner.go
+/backend/gonext_openapi_runner.go
 
 # env file
 .env

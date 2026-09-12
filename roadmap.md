@@ -35,7 +35,7 @@ Every generated project gets all of these, regardless of which feature packs wer
 | **Auth Provider Abstraction** | Swappable provider interface (Clerk / Supabase / Auth0 adapters) | The provider contract ships in gonext's core library as `github.com/dennys-bd/gonext/auth` (`auth/`), holding `Identity`, the `Resolver` port, the rule helpers and the context accessors. gonext is a single module under a single version, so the CLI a developer runs and the library their project imports are the same artifact at the same `vX.Y.Z`; `auth/` imports stdlib only, so taking that dependency compiles none of the CLI's own tree. Generated projects import it rather than vendoring it, so a third-party adapter — Clerk, Supabase, Auth0 — can ship as an installable module compiled against a stable type; a scaffolded port could not be implemented from outside the project at all. Swapping provider is a two-line change to `users.ProvideSessionIssuer`/`users.ProvideResolver` in `backend/wire.go`. `gonext init` pins the contract version the CLI was built against. |
 | **Health Probes** | `/healthz` & `/readyz` | Liveness and readiness endpoints with active database ping checks. |
 | **Frontend Framework** | [Next.js](https://nextjs.org/) (App Router) | Modern React 19 + TypeScript frontend with Server Components and Mantine UI. |
-| **Contract Sync & Reverse URLs** | `openapi-typescript` / `@hey-api/openapi-ts` + `openapi-fetch` | Auto-generated TypeScript types and type-safe reverse API URL client (`api.users.getById({ params: { id } })`), eliminating hardcoded URL strings. REST-tier client; GraphQL/gRPC tiers use their own codegen — see *API Protocol Layer* below. |
+| **Contract Sync & Reverse URLs** | `@hey-api/openapi-ts` (bundled fetch client) | Auto-generated TypeScript types and type-safe reverse API URL client (`api.users.getById({ params: { id } })`), eliminating hardcoded URL strings. REST-tier client; GraphQL/gRPC tiers use their own codegen — see *API Protocol Layer* below. |
 | **Frontend-Backend Integration** | Typed API client + data-fetching layer | Typed frontend API client wired into a data-fetching layer, with environment-based API base URL handling across dev/CI/prod. Carries identity through the typed client. |
 | **Integration & API Testing** | `testcontainers-go`, Bruno | Ephemeral container testing for Postgres (`testcontainers-go`) and API smoke tests (`make smoke`) against the full `docs/bruno/` request collection. |
 | **E2E Testing** | Playwright | Full-stack browser E2E testing. |
@@ -85,7 +85,7 @@ flowchart TD
 |---|---|---|---|
 | Frontend → Next.js (Tier 1) | REST | Next.js App Router / Server Actions | `fetch` / TanStack Query |
 | Frontend → Next.js (Tier 1) | GraphQL | Next.js Route Handler | GraphQL Codegen + Urql / Apollo |
-| Next.js → Go (Tier 2, Default) | REST | Echo + Huma v2 | `@hey-api/openapi-ts` + `openapi-fetch` |
+| Next.js → Go (Tier 2, Default) | REST | Echo + Huma v2 | `@hey-api/openapi-ts` (bundled fetch client) |
 | Next.js → Go (Tier 2) | GraphQL | [gqlgen](https://gqlgen.com/) | Typed GraphQL client / `graphql-request` |
 | Next.js → Go (Tier 2) | gRPC | [Connect-RPC](https://connectrpc.com/) / gRPC-Go | `@connectrpc/connect-web` |
 

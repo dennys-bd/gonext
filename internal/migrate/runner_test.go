@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/dennys-bd/gonext/internal/project"
 )
 
 func TestApply_SubstitutesModulePathAndCleansUpOnSuccess(t *testing.T) {
@@ -31,8 +33,8 @@ func TestApply_SubstitutesModulePathAndCleansUpOnSuccess(t *testing.T) {
 	if !strings.Contains(capturedContent, "example.com/foo/backend/internal/config") {
 		t.Errorf("Apply: runner content missing substituted module path, got: %s", capturedContent)
 	}
-	if strings.Contains(capturedContent, modulePathToken) {
-		t.Errorf("Apply: runner content still contains unsubstituted token %q", modulePathToken)
+	if strings.Contains(capturedContent, project.ModulePathToken) {
+		t.Errorf("Apply: runner content still contains unsubstituted token %q", project.ModulePathToken)
 	}
 
 	if _, err := os.Stat(filepath.Join(backendDir, runnerFilename)); !os.IsNotExist(err) {
@@ -112,4 +114,12 @@ func stubRunFunc(t *testing.T, fn func(ctx context.Context, dir, name string, ar
 	orig := runFunc
 	runFunc = fn
 	return func() { runFunc = orig }
+}
+
+func writeGoMod(t *testing.T, dir, modulePath string) {
+	t.Helper()
+	content := "module " + modulePath + "\n\ngo 1.26\n"
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte(content), 0o644); err != nil {
+		t.Fatalf("writing go.mod: %v", err)
+	}
 }

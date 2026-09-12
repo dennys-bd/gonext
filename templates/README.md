@@ -29,9 +29,22 @@ curl localhost:8080/healthz
 
 ```bash
 cd frontend
-pnpm install
+pnpm install   # also generates lib/api/ from ../docs/openapi.yaml
 pnpm dev
 ```
+
+The frontend calls the backend only from Next's server (server components and server actions) through the generated client in `frontend/lib/api/`. The backend address comes from `API_URL` (server-only, default `http://localhost:8080`); it is never exposed to the browser, so no CORS is configured.
+
+## API contract
+
+`docs/openapi.yaml` is produced by `gonext openapi` from the backend's route registrations, with no database or environment needed:
+
+```bash
+make openapi         # regenerate docs/openapi.yaml and frontend/lib/api/
+make openapi-check   # fail if docs/openapi.yaml is stale (CI runs this)
+```
+
+If `frontend/lib/api/` is missing (it is gitignored), `pnpm --dir frontend codegen` regenerates it.
 
 ## Development Prerequisites
 
