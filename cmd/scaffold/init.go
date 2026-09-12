@@ -11,6 +11,7 @@ import (
 	gonext "github.com/dennys-bd/gonext"
 	xexec "github.com/dennys-bd/gonext/internal/exec"
 	"github.com/dennys-bd/gonext/internal/migrate"
+	"github.com/dennys-bd/gonext/internal/project"
 	"github.com/dennys-bd/gonext/internal/scaffold"
 )
 
@@ -74,7 +75,7 @@ func runInit(args []string) int {
 
 	if err := bootstrapDatabase(ctx, dest); err != nil {
 		fmt.Println("warning: database bootstrap failed:", err)
-		fmt.Println("  run manually: make db-up && make migrate-up")
+		fmt.Println("  run manually: make db-up && gonext migrate")
 	}
 
 	fmt.Println()
@@ -131,6 +132,11 @@ func bootstrapDatabase(ctx context.Context, dest string) error {
 		return fmt.Errorf("waiting for database: %w", err)
 	}
 
+	// The migration runner loads config.Config, which needs
+	// DATABASE_URL; the .env just copied from .env.example carries it.
+	if err := project.LoadEnv(dest); err != nil {
+		return fmt.Errorf("loading .env: %w", err)
+	}
 	if err := migrate.Apply(ctx, dest); err != nil {
 		return fmt.Errorf("running migration: %w", err)
 	}
