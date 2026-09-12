@@ -2,9 +2,13 @@ package scaffold
 
 import (
 	"bytes"
+	"fmt"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
+	"slices"
+	"strings"
 )
 
 const projectNameToken = "[PROJECT-NAME]"
@@ -76,20 +80,115 @@ func Copy(fsys fs.FS, root, dest, slug string, agents []string) error {
 			return nil
 		}
 
-		data, err := fs.ReadFile(fsys, path)
-		if err != nil {
-			return err
-		}
-
-		if !isBinary(data) {
-			data = bytes.ReplaceAll(data, []byte(projectNameToken), []byte(slug))
-		}
-
-		if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
-			return err
-		}
-		return os.WriteFile(target, data, generatedFileMode)
+		return copyFile(fsys, path, target, slug)
 	})
+}
+
+// copyFile writes the file at path within fsys to target, substituting
+// the [PROJECT-NAME] token in text files and copying binaries verbatim.
+func copyFile(fsys fs.FS, path, target, slug string) error {
+	data, err := fs.ReadFile(fsys, path)
+	if err != nil {
+		return err
+	}
+
+	if !isBinary(data) {
+		data = bytes.ReplaceAll(data, []byte(projectNameToken), []byte(slug))
+	}
+
+	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+		return err
+	}
+	return os.WriteFile(target, data, generatedFileMode)
+}
+
+// agentsDoc marks a directory as a gonext project for AddAgents:
+// every generated project gets it unconditionally.
+const agentsDoc = "AGENTS.md"
+
+// AddAgents writes only the paths agents own (see agentPaths) from
+// the template tree rooted at root within fsys into the existing
+// project at dest, substituting slug exactly as Copy does. dest must
+// contain AGENTS.md. Every destination file is checked before any is
+// written: if one already exists and force is false, the error
+// names all of them and nothing is written; a symlink at any of them
+// is refused even with force. It returns the
+// dest-relative, slash-separated paths written, in walk order.
+func AddAgents(fsys fs.FS, root, dest, slug string, agents []string, force bool) ([]string, error) {
+	if _, err := os.Stat(filepath.Join(dest, agentsDoc)); err != nil {
+		return nil, fmt.Errorf("no %s in %s: not a gonext project", agentsDoc, dest)
+	}
+
+	var files []string
+	for _, agent := range agents {
+		for _, owned := range agentPaths[agent] {
+			err := fs.WalkDir(fsys, path.Join(root, owned), func(p string, d fs.DirEntry, err error) error {
+				if err != nil {
+					return err
+				}
+				if d.IsDir() {
+					return nil
+				}
+				rel, err := filepath.Rel(root, p)
+				if err != nil {
+					return err
+				}
+				files = append(files, filepath.ToSlash(rel))
+				return nil
+			})
+			if err != nil {
+				return nil, fmt.Errorf("adding %s: %w", owned, err)
+			}
+		}
+	}
+
+	var existing, symlinks []string
+	for _, rel := range files {
+		if link, ok := symlinkComponent(dest, rel); ok {
+			if !slices.Contains(symlinks, link) {
+				symlinks = append(symlinks, link)
+			}
+			continue
+		}
+		if _, err := os.Lstat(filepath.Join(dest, filepath.FromSlash(rel))); err == nil {
+			existing = append(existing, rel)
+		}
+	}
+	if len(symlinks) > 0 {
+		return nil, fmt.Errorf("refusing to write through symlinks: %s", strings.Join(symlinks, ", "))
+	}
+	if len(existing) > 0 && !force {
+		return nil, fmt.Errorf("refusing to overwrite existing files (pass --force to replace them): %s", strings.Join(existing, ", "))
+	}
+
+	for _, rel := range files {
+		target := filepath.Join(dest, filepath.FromSlash(rel))
+		if err := copyFile(fsys, path.Join(root, rel), target, slug); err != nil {
+			return nil, err
+		}
+	}
+	return files, nil
+}
+
+// symlinkComponent reports the first component of rel under dest that
+// is a symlink, if any. A symlink anywhere on the path — a leaf like
+// CLAUDE.md or a directory like .claude, planted by a booby-trapped
+// checkout or pointing at a dotfile — would otherwise be followed by
+// MkdirAll/WriteFile and land the file outside the project.
+func symlinkComponent(dest, rel string) (string, bool) {
+	parts := strings.Split(rel, "/")
+	for i := range parts {
+		sub := strings.Join(parts[:i+1], "/")
+		fi, err := os.Lstat(filepath.Join(dest, filepath.FromSlash(sub)))
+		if err != nil {
+			// Missing from here down: nothing left to follow.
+			return "", false
+		}
+		if fi.Mode()&os.ModeSymlink != 0 {
+			return sub, true
+		}
+	}
+	return "", false
 }
 
 // isBinary reports whether data looks like a binary file, using the

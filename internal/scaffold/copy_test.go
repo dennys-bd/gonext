@@ -5,8 +5,11 @@ import (
 	"embed"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
+
+	gonext "github.com/dennys-bd/gonext"
 )
 
 //go:embed all:testdata/fixture
@@ -179,5 +182,178 @@ func TestCopy_SkipsUnselectedAgentPaths(t *testing.T) {
 		if _, err := os.Stat(filepath.Join(dest, filepath.FromSlash(rel))); !os.IsNotExist(err) {
 			t.Errorf("expected %s to be skipped by Copy, but it exists at %s", rel, dest)
 		}
+	}
+}
+
+// scaffoldDest returns a real default scaffold (no tool selected) in a
+// fresh t.TempDir(): it has AGENTS.md and .github/workflows/ci.yml,
+// but no tool files, matching what `gonext init` writes today.
+func scaffoldDest(t *testing.T) string {
+	t.Helper()
+	dest := t.TempDir()
+	if err := Copy(gonext.Templates, "templates", dest, "my-app", nil); err != nil {
+		t.Fatalf("Copy: unexpected error: %v", err)
+	}
+	return dest
+}
+
+func TestAddAgents_WritesOnlyOwnedPaths(t *testing.T) {
+	dest := scaffoldDest(t)
+
+	written, err := AddAgents(gonext.Templates, "templates", dest, "my-app", []string{"claude", "copilot"}, false)
+	if err != nil {
+		t.Fatalf("AddAgents: unexpected error: %v", err)
+	}
+
+	want := []string{"CLAUDE.md", ".claude/settings.json", ".claude/skills/new-branch/SKILL.md", ".github/copilot-instructions.md"}
+	if !slices.Equal(written, want) {
+		t.Errorf("AddAgents written = %v, want %v", written, want)
+	}
+
+	claude, err := os.ReadFile(filepath.Join(dest, "CLAUDE.md"))
+	if err != nil {
+		t.Fatalf("reading CLAUDE.md: %v", err)
+	}
+	if !strings.HasPrefix(string(claude), "# my-app\n") {
+		t.Errorf("CLAUDE.md = %q, want prefix %q", claude, "# my-app\n")
+	}
+
+	if _, err := os.Stat(filepath.Join(dest, ".github", "workflows", "ci.yml")); err != nil {
+		t.Errorf(".github/workflows/ci.yml: expected still present: %v", err)
+	}
+	for _, rel := range []string{"GEMINI.md", ".cursor"} {
+		if _, err := os.Stat(filepath.Join(dest, filepath.FromSlash(rel))); !os.IsNotExist(err) {
+			t.Errorf("expected %s to not exist, got err=%v", rel, err)
+		}
+	}
+}
+
+func TestAddAgents_CodexIsNoOp(t *testing.T) {
+	dest := scaffoldDest(t)
+
+	written, err := AddAgents(gonext.Templates, "templates", dest, "my-app", []string{"codex"}, false)
+	if err != nil {
+		t.Fatalf("AddAgents: unexpected error: %v", err)
+	}
+	if len(written) != 0 {
+		t.Errorf("AddAgents written = %v, want empty", written)
+	}
+
+	for _, rel := range []string{"CLAUDE.md", "GEMINI.md", ".cursor", ".claude"} {
+		if _, err := os.Stat(filepath.Join(dest, filepath.FromSlash(rel))); !os.IsNotExist(err) {
+			t.Errorf("expected %s to not exist, got err=%v", rel, err)
+		}
+	}
+}
+
+func TestAddAgents_RefusesExistingFiles(t *testing.T) {
+	dest := scaffoldDest(t)
+	if err := os.WriteFile(filepath.Join(dest, "GEMINI.md"), []byte("mine\n"), 0o644); err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+
+	_, err := AddAgents(gonext.Templates, "templates", dest, "my-app", []string{"claude", "gemini"}, false)
+	if err == nil {
+		t.Fatal("AddAgents: expected error, got nil")
+	}
+	if !strings.Contains(err.Error(), "GEMINI.md") {
+		t.Errorf("AddAgents error %q does not mention GEMINI.md", err)
+	}
+	if !strings.Contains(err.Error(), "--force") {
+		t.Errorf("AddAgents error %q does not mention --force", err)
+	}
+
+	gemini, readErr := os.ReadFile(filepath.Join(dest, "GEMINI.md"))
+	if readErr != nil {
+		t.Fatalf("reading GEMINI.md: %v", readErr)
+	}
+	if string(gemini) != "mine\n" {
+		t.Errorf("GEMINI.md = %q, want unchanged %q", gemini, "mine\n")
+	}
+	if _, err := os.Stat(filepath.Join(dest, "CLAUDE.md")); !os.IsNotExist(err) {
+		t.Errorf("expected CLAUDE.md to not exist, got err=%v", err)
+	}
+}
+
+func TestAddAgents_ForceOverwrites(t *testing.T) {
+	dest := scaffoldDest(t)
+	if err := os.WriteFile(filepath.Join(dest, "GEMINI.md"), []byte("mine\n"), 0o644); err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+
+	written, err := AddAgents(gonext.Templates, "templates", dest, "my-app", []string{"gemini"}, true)
+	if err != nil {
+		t.Fatalf("AddAgents: unexpected error: %v", err)
+	}
+	if !slices.Equal(written, []string{"GEMINI.md"}) {
+		t.Errorf("AddAgents written = %v, want %v", written, []string{"GEMINI.md"})
+	}
+
+	gemini, err := os.ReadFile(filepath.Join(dest, "GEMINI.md"))
+	if err != nil {
+		t.Fatalf("reading GEMINI.md: %v", err)
+	}
+	if string(gemini) == "mine\n" {
+		t.Errorf("GEMINI.md was not overwritten: %q", gemini)
+	}
+	if !strings.Contains(string(gemini), "AGENTS.md") {
+		t.Errorf("GEMINI.md = %q, want it to mention AGENTS.md", gemini)
+	}
+}
+
+// TestAddAgents_RefusesSymlinks pins that a symlink anywhere on an
+// owned path — a dangling leaf or a whole owned directory — is never
+// written through, even with force: it would pass a Stat-based
+// existence check and land the file wherever it points.
+func TestAddAgents_RefusesSymlinks(t *testing.T) {
+	tests := []struct {
+		name   string
+		link   string // dest-relative path to plant as a symlink
+		target string // outside-relative target; "" links the outside dir itself
+		agent  string
+	}{
+		{name: "dangling leaf file", link: "GEMINI.md", target: "GEMINI.md", agent: "gemini"},
+		{name: "owned directory", link: ".claude", target: "", agent: "claude"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dest := scaffoldDest(t)
+			outside := t.TempDir()
+			if err := os.Symlink(filepath.Join(outside, tt.target), filepath.Join(dest, tt.link)); err != nil {
+				t.Fatalf("setup: %v", err)
+			}
+
+			_, err := AddAgents(gonext.Templates, "templates", dest, "my-app", []string{tt.agent}, true)
+			if err == nil {
+				t.Fatal("AddAgents: expected error for a symlinked destination, got nil")
+			}
+			if !strings.Contains(err.Error(), "symlink") || !strings.Contains(err.Error(), tt.link) {
+				t.Errorf("AddAgents error = %q, want it to name the symlink %s", err, tt.link)
+			}
+
+			entries, err := os.ReadDir(outside)
+			if err != nil {
+				t.Fatalf("reading outside dir: %v", err)
+			}
+			if len(entries) != 0 {
+				t.Errorf("wrote through the symlink: outside dir has %v", entries)
+			}
+		})
+	}
+}
+
+func TestAddAgents_RejectsNonProject(t *testing.T) {
+	dest := t.TempDir()
+
+	_, err := AddAgents(gonext.Templates, "templates", dest, "my-app", []string{"claude"}, false)
+	if err == nil {
+		t.Fatal("AddAgents: expected error, got nil")
+	}
+	if !strings.Contains(err.Error(), "AGENTS.md") {
+		t.Errorf("AddAgents error %q does not mention AGENTS.md", err)
+	}
+	if _, err := os.Stat(filepath.Join(dest, "CLAUDE.md")); !os.IsNotExist(err) {
+		t.Errorf("expected CLAUDE.md to not exist, got err=%v", err)
 	}
 }

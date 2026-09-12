@@ -44,7 +44,7 @@ func ParseAgents(list string) ([]string, error) {
 		return nil, nil
 	}
 
-	seen := map[string]bool{}
+	var names []string
 	for _, raw := range strings.Split(list, ",") {
 		name := strings.TrimSpace(raw)
 		if name == "" {
@@ -53,6 +53,20 @@ func ParseAgents(list string) ([]string, error) {
 		if name == AgentsNone {
 			return nil, fmt.Errorf("--agents=none cannot be combined with other tool names")
 		}
+		names = append(names, name)
+	}
+
+	return ParseAgentNames(names)
+}
+
+// ParseAgentNames validates names against the recognised tools and
+// returns them sorted and deduplicated. Unlike ParseAgents there is
+// no "none" shortcut: `gonext add agent` takes tool names
+// positionally, and "none" is as unknown there as any other
+// unrecognised name. An empty names is an empty selection.
+func ParseAgentNames(names []string) ([]string, error) {
+	seen := map[string]bool{}
+	for _, name := range names {
 		if _, ok := agentPaths[name]; !ok {
 			return nil, fmt.Errorf("unknown agent %q, valid names: %s", name, strings.Join(AgentNames(), ", "))
 		}
