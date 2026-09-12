@@ -25,7 +25,7 @@ func runOpenAPI(args []string) int {
 		fmt.Fprintln(os.Stderr, "error:", err)
 		return 1
 	}
-	root, err := project.ResolveRoot(cwd)
+	root, err := project.Root(cwd)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)
 		return 1

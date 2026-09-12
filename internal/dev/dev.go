@@ -55,11 +55,10 @@ func (l *runLoop) run(ctx context.Context, backendRoot string, window time.Durat
 	return l.stop()
 }
 
-// Run resolves the project root by walking up from cwd to the
-// nearest ancestor go.mod, then runs the watch-build-restart loop
+// Run checks cwd is the project root (it holds go.mod), then runs the watch-build-restart loop
 // against <root>/backend until ctx is cancelled.
 func Run(ctx context.Context, fsys fs.FS, cwd string) error {
-	root, err := project.ResolveRoot(cwd)
+	root, err := project.Root(cwd)
 	if err != nil {
 		return fmt.Errorf("resolving project root: %w", err)
 	}

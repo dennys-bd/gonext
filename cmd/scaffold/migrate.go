@@ -11,7 +11,7 @@ import (
 
 // runMigrate implements `gonext migrate` and returns the process
 // exit code. It applies the pending Postgres migrations for the
-// generated project rooted at (or above) the current directory.
+// generated project in the current directory.
 func runMigrate(args []string) int {
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -19,7 +19,7 @@ func runMigrate(args []string) int {
 		return 1
 	}
 
-	root, err := project.ResolveRoot(cwd)
+	root, err := project.Root(cwd)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)
 		return 1

@@ -15,26 +15,21 @@ import (
 
 const goModFilename = "go.mod"
 
-// ResolveRoot walks up from start looking for the nearest ancestor
-// directory containing a go.mod file, mirroring how the go tool
-// itself resolves the current module's root.
-func ResolveRoot(start string) (string, error) {
-	dir, err := filepath.Abs(start)
+// Root checks that dir is a generated project's root — the directory
+// holding its go.mod, where `gonext init` ran `go mod init` — and
+// returns it as an absolute path. Subcommands are meant to be run
+// from the root (the generated Makefile does), so a go.mod is
+// required right there rather than searched for in parent
+// directories.
+func Root(dir string) (string, error) {
+	abs, err := filepath.Abs(dir)
 	if err != nil {
 		return "", fmt.Errorf("resolving absolute path: %w", err)
 	}
-
-	for {
-		if _, err := os.Stat(filepath.Join(dir, goModFilename)); err == nil {
-			return dir, nil
-		}
-
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			return "", fmt.Errorf("no %s found in %q or any parent directory", goModFilename, start)
-		}
-		dir = parent
+	if _, err := os.Stat(filepath.Join(abs, goModFilename)); err != nil {
+		return "", fmt.Errorf("no %s in %s: run this from the project root", goModFilename, abs)
 	}
+	return abs, nil
 }
 
 // ModulePath reads root's go.mod and returns its module path.
