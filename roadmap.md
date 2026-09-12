@@ -39,7 +39,7 @@ Every generated project gets all of these, regardless of which feature packs wer
 | **Frontend-Backend Integration** | Typed API client + data-fetching layer | Typed frontend API client wired into a data-fetching layer, with environment-based API base URL handling across dev/CI/prod. Carries identity through the typed client. |
 | **Integration & API Testing** | `testcontainers-go`, Bruno | Ephemeral container testing for Postgres (`testcontainers-go`) and API smoke tests (`make smoke`) against the full `docs/bruno/` request collection. |
 | **E2E Testing** | Playwright | Full-stack browser E2E testing. |
-| **Agent Guardrails (Claude)** | `CLAUDE.md`, `.claude/`, `mise` | Claude Code's pointer file and its executable configuration (branch-guard hook, `new-branch` skill), scaffolded only when `claude` is selected at `gonext init --agents`. The guardrail prose itself is not here — see the next row. |
+| **Agent Guardrails (Claude)** | `CLAUDE.md`, `.claude/`, `mise` | Claude Code's pointer file and its executable configuration (branch-guard hook, `new-branch` skill), scaffolded when `claude` is selected at `gonext init --agents` or added later with `gonext add agent claude`. The guardrail prose itself is not here — see the next row. |
 | **Agent Guardrails (Codex/other)** | `AGENTS.md` + per-tool pointers | The single tool-neutral guardrail document every generated project gets (`templates/AGENTS.md`): pinned toolchains, architecture boundary rules, Bruno/smoke/OpenAPI sync rules. Codex reads it natively; Cursor (`.cursor/rules/gonext.mdc`), Copilot (`.github/copilot-instructions.md`), and Gemini (`GEMINI.md`) get a selectable few-line pointer at it. Ownership is a compile-time map in `internal/scaffold` (`agentPaths`), not a directory convention. |
 | **Bruno Request Collection** | `docs/bruno/` | Executable Bruno API request files (happy path + error cases per endpoint), doubling as the project's smoke test via `make smoke`. |
 | **Spec-Driven Docs Tree** | `docs/superpowers/{specs,plans}` | Structured architecture specifications and task breakdown plans, following this repo's own spec-driven workflow. |
@@ -145,7 +145,7 @@ The CLI has two distinct command families. **Scaffold-time** commands run once, 
 
 Dev-loop commands should be thin wrappers around existing `make` targets where one already exists (e.g. Postgres, wire DI), rather than duplicating that logic — the CLI adds the interactive/templated parts (name prompts, file generation, boilerplate insertion) on top.
 
-Scaffold-time is `gonext init` — the prompt flow above, plus pruning and the first migration. `gonext add <pack>` belongs to the same family, retrofitting a pack onto an already-generated project.
+Scaffold-time is `gonext init` — the prompt flow above, plus pruning and the first migration. `gonext add <pack>` belongs to the same family, retrofitting a pack onto an already-generated project; `gonext add agent <tool>…` is its first member, layering a tool's pointer files onto a project scaffolded without them (refusing to overwrite an existing file unless `--force` is given).
 
 Dev-loop is `gonext migrate` and `gonext dev` today. The generator set that fills it out — migration, resource, worker, page, wire refresh, doctor — is tracked on the board rather than inventoried here.
 
