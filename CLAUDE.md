@@ -49,9 +49,9 @@ which is `go run ./cmd/golden` — it backs up any existing `golden/` to `golden
 Standard `go test`, table-driven, with `-race` in CI-equivalent runs:
 
 ```sh
-go build ./auth/... ./cmd/... ./internal/... .   # excludes templates/, which never builds standalone
-go vet ./auth/... ./cmd/... ./internal/... .
-go test -race ./auth/... ./cmd/... ./internal/... .
+go build ./auth/... ./cmd/... ./dbmigrate/... ./internal/... .   # excludes templates/, which never builds standalone
+go vet ./auth/... ./cmd/... ./dbmigrate/... ./internal/... .
+go test -race ./auth/... ./cmd/... ./dbmigrate/... ./internal/... .
 ```
 
 `make test` runs exactly that. There is one module, so no separate invocation is needed for `auth/`.
