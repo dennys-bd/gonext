@@ -105,8 +105,7 @@ func (r *Registry) Order() ([]Migration, error) {
 	for key := range r.entries {
 		dependsOn[key] = nil
 	}
-	for domain, keys := range byDomain {
-		_ = domain
+	for _, keys := range byDomain {
 		for i := 1; i < len(keys); i++ {
 			dependsOn[keys[i]] = append(dependsOn[keys[i]], keys[i-1])
 		}
@@ -201,9 +200,9 @@ func lessKey(entries map[string]entry, a, b string) bool {
 // Every remaining node depends on at least one other remaining node,
 // since anything depending only on already-ordered nodes would have
 // reached in-degree 0. Starting from the smallest remaining key and
-// walking dependsOn (rebuilt here from dependents is unnecessary; we
-// instead walk forward via dependents' inverse — see below) finds a
-// repeat, which bounds a cycle.
+// walking dependsOn (rebuilt here as the inverse of dependents,
+// restricted to the remaining nodes) must therefore revisit a node,
+// and that repeat bounds a cycle.
 func cycleError(entries map[string]entry, remaining map[string]int, dependents map[string][]string) error {
 	// dependsOn restricted to remaining nodes, derived from dependents.
 	dependsOn := make(map[string][]string, len(remaining))

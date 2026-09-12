@@ -174,4 +174,3 @@ func mustAdd(t *testing.T, r *Registry, m Migration, up, down MigrationFunc, dep
 		t.Fatalf("Add(%s): unexpected error: %v", m, err)
 	}
 }
-

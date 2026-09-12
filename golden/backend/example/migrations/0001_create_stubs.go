@@ -4,10 +4,12 @@ import (
 	"context"
 
 	"github.com/uptrace/bun"
+
+	"github.com/dennys-bd/gonext/dbmigrate"
 )
 
 func init() {
-	Migrations.MustRegister(
+	dbmigrate.Register(
 		func(ctx context.Context, db *bun.DB) error {
 			_, err := db.ExecContext(ctx, `
 				CREATE TABLE stubs (

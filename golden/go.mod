@@ -5,7 +5,7 @@ go 1.26.7
 require (
 	github.com/caarlos0/env/v11 v11.4.1
 	github.com/danielgtaylor/huma/v2 v2.39.1
-	github.com/dennys-bd/gonext v0.0.0-20260901030717-52ea7aa89005
+	github.com/dennys-bd/gonext v0.0.0-20260912225425-d0ae2746462c
 	github.com/go-playground/validator/v10 v10.30.4
 	github.com/google/wire v0.7.0
 	github.com/jackc/pgx/v5 v5.11.0

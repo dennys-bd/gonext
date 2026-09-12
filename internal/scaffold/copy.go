@@ -27,7 +27,7 @@ const ModulePath = "github.com/dennys-bd/gonext"
 // It is a pseudo-version until the first release is tagged: gonext is
 // resolvable from any pushed commit, so generated projects build
 // today without waiting on a tag.
-const ModuleVersion = "v0.0.0-20260901030717-52ea7aa89005"
+const ModuleVersion = "v0.0.0-20260912225425-d0ae2746462c"
 
 // binarySniffLen is how many leading bytes are inspected to decide
 // whether a file is binary, matching the heuristic Git itself uses.

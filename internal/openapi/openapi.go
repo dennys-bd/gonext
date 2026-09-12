@@ -50,7 +50,7 @@ var codegenFunc = xexec.Run
 // returns the OpenAPI document it printed. The runner is removed
 // afterward regardless of outcome.
 func Generate(ctx context.Context, root string) ([]byte, error) {
-	backendDir, remove, err := project.MaterializeRunner(root, runnerFilename, runnerTemplate)
+	backendDir, remove, err := project.MaterializeRunner(root, runnerFilename, runnerTemplate, nil)
 	if err != nil {
 		return nil, err
 	}

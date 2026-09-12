@@ -17,6 +17,8 @@ func main() {
 		os.Exit(runInit(os.Args[2:]))
 	case "add":
 		os.Exit(runAdd(os.Args[2:]))
+	case "generate":
+		os.Exit(runGenerate(os.Args[2:]))
 	case "migrate":
 		os.Exit(runMigrate(os.Args[2:]))
 	case "dev":
@@ -32,6 +34,7 @@ func main() {
 func usage() {
 	fmt.Fprintln(os.Stderr, "usage: gonext init <name> [path] [--agents=<list>]")
 	fmt.Fprintln(os.Stderr, "       gonext add agent <tool>... [--force]")
+	fmt.Fprintln(os.Stderr, "       gonext generate migration <domain> <name>")
 	fmt.Fprintln(os.Stderr, "       gonext migrate")
 	fmt.Fprintln(os.Stderr, "       gonext dev")
 	fmt.Fprintln(os.Stderr, "       gonext openapi [--check]")

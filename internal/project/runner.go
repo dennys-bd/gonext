@@ -13,16 +13,19 @@ const ModulePathToken = "[MODULE-PATH]"
 
 const runnerFileMode = 0o644
 
-// MaterializeRunner writes template — with ModulePathToken replaced
-// by root's module path — to root/backend/filename and returns the
-// backend directory together with a remove func the caller defers.
+// MaterializeRunner writes template — with extra's tokens replaced
+// first, then ModulePathToken replaced by root's module path — to
+// root/backend/filename and returns the backend directory together
+// with a remove func the caller defers. extra is applied first, so
+// its values may use ModulePathToken; nil is fine when a runner has
+// no extra tokens.
 //
 // The runner goes under backend/ rather than root so it can import
 // backend's internal/ packages; Go's internal-import rule would block
 // a file at root. filename must not start with "." or "_": the go
 // tool silently excludes such files, which makes `go run` report "no
 // Go files" instead of running it.
-func MaterializeRunner(root, filename string, template []byte) (backendDir string, remove func(), err error) {
+func MaterializeRunner(root, filename string, template []byte, extra map[string]string) (backendDir string, remove func(), err error) {
 	modulePath, err := ModulePath(root)
 	if err != nil {
 		return "", nil, fmt.Errorf("resolving module path: %w", err)
@@ -30,7 +33,11 @@ func MaterializeRunner(root, filename string, template []byte) (backendDir strin
 
 	backendDir = filepath.Join(root, "backend")
 	runnerPath := filepath.Join(backendDir, filename)
-	content := bytes.ReplaceAll(template, []byte(ModulePathToken), []byte(modulePath))
+	content := template
+	for token, value := range extra {
+		content = bytes.ReplaceAll(content, []byte(token), []byte(value))
+	}
+	content = bytes.ReplaceAll(content, []byte(ModulePathToken), []byte(modulePath))
 	if err := os.WriteFile(runnerPath, content, runnerFileMode); err != nil {
 		return "", nil, fmt.Errorf("writing %s: %w", filename, err)
 	}

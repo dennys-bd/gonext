@@ -35,7 +35,9 @@ func (r *Registry) Apply(ctx context.Context, db *bun.DB) (applied []Migration, 
 		return nil, fmt.Errorf("initializing migration tables: %w", err)
 	}
 	if err := migrator.Lock(ctx); err != nil {
-		return nil, err
+		// Bun's lock is a row in bun_migration_locks with no expiry, so
+		// a run killed mid-way leaves it behind; say how to recover.
+		return nil, fmt.Errorf("%w (a killed run leaves its row in bun_migration_locks; delete it to recover)", err)
 	}
 	defer func() {
 		if uerr := migrator.Unlock(ctx); uerr != nil && err == nil {
