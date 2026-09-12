@@ -58,13 +58,16 @@ func TestCopy_GoldenSnapshot(t *testing.T) {
 
 // generatedDirs are top-level directories under golden/ that Copy()
 // never writes: dependencies pnpm/go install and build output `make
-// golden`'s underlying `gonext init` run produces. They're excluded
-// from the golden-snapshot comparison — and, critically, never
-// descended into during the walk below, since pnpm's node_modules
-// layout uses symlinked directories that a naive file-read chokes on.
+// golden`'s underlying `gonext init` run produces, plus
+// frontend/lib/api, which `pnpm install`'s postinstall codegen step
+// generates from docs/openapi.yaml. They're excluded from the
+// golden-snapshot comparison — and, critically, never descended into
+// during the walk below, since pnpm's node_modules layout uses
+// symlinked directories that a naive file-read chokes on.
 var generatedDirs = []string{
 	"frontend/node_modules",
 	"frontend/.next",
+	"frontend/lib/api",
 	"backend/bin",
 }
 
@@ -115,6 +118,8 @@ func TestIsGeneratedArtifact(t *testing.T) {
 		{rel: "frontend/node_modules", want: true},
 		{rel: "frontend/node_modules/next/package.json", want: true},
 		{rel: "frontend/.next/build-manifest.json", want: true},
+		{rel: "frontend/lib/api/sdk.gen.ts", want: true},
+		{rel: "frontend/lib/api-client.ts", want: false},
 		{rel: "backend/bin/server", want: true},
 		{rel: "backend/cmd/server/main.go", want: false},
 		{rel: "frontend/package.json", want: false},

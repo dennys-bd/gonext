@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# generated typed API client (rebuilt by "pnpm codegen" on install)
+/lib/api/

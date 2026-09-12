@@ -57,3 +57,32 @@ func InitializeApp(ctx context.Context) (*App, func(), error) {
 		cleanup()
 	}, nil
 }
+
+// InitializeSpec builds the same Huma API InitializeApp builds —
+// every domain registered through the same Register calls — over
+// infrastructure that never connects, so the OpenAPI document can be
+// produced with no database and no environment. Run `wire
+// ./backend/...` (see `make generate`) to regenerate wire_gen.go
+// after changing the provider list below.
+func InitializeSpec() (*Spec, error) {
+	logger := discardLogger()
+	echo := api.NewEcho(logger)
+	db := database.OfflineDB()
+	sessionIssuer := users.ProvideSessionIssuer(db)
+	resolver := users.ProvideResolver(sessionIssuer)
+	authConfig := api.ProvideAuthConfig()
+	humaAPI := api.NewHumaAPI(echo, resolver, authConfig, logger)
+	healthzRegistered := api.ProvideHealthzRegistration(humaAPI, logger)
+	readyzRegistered := api.ProvideReadyzRegistration(humaAPI, db, logger)
+	registered, err := example.ProvideRegistration(humaAPI, db, logger)
+	if err != nil {
+		return nil, err
+	}
+	configConfig := specConfig()
+	usersRegistered, err := users.ProvideRegistration(humaAPI, db, configConfig, logger, sessionIssuer)
+	if err != nil {
+		return nil, err
+	}
+	spec := NewSpec(humaAPI, healthzRegistered, readyzRegistered, registered, usersRegistered)
+	return spec, nil
+}

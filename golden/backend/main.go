@@ -9,6 +9,7 @@ package main
 import (
 	"context"
 	"errors"
+	"flag"
 	"fmt"
 	"net/http"
 	"os"
@@ -17,6 +18,27 @@ import (
 )
 
 func main() {
+	openapi := flag.Bool("openapi", false, "print the OpenAPI document as YAML and exit")
+	flag.Parse()
+
+	if *openapi {
+		spec, err := InitializeSpec()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "initializing spec: %v\n", err)
+			os.Exit(1)
+		}
+		doc, err := spec.API.OpenAPI().YAML()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "rendering openapi document: %v\n", err)
+			os.Exit(1)
+		}
+		if _, err := os.Stdout.Write(doc); err != nil {
+			fmt.Fprintf(os.Stderr, "writing openapi document: %v\n", err)
+			os.Exit(1)
+		}
+		return
+	}
+
 	app, cleanup, err := InitializeApp(context.Background())
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "initializing app: %v\n", err)

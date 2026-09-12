@@ -15,6 +15,7 @@ jobs:
       - run: make vet
       - run: make lint
       - run: make generate-check
+      - run: make openapi-check
       - run: make vulncheck
       - run: make build
       - run: make test
