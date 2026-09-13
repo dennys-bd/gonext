@@ -81,12 +81,21 @@ func (r *Registry) Add(m Migration, up, down MigrationFunc, deps ...Dependency) 
 	return nil
 }
 
-// Order returns every registered migration in dependency order, ties
-// broken by (Domain, Version) so runs are deterministic. Edges come
-// from two sources: within a domain, each version depends on the
-// previous registered version; across domains, each declared After
-// target.
-func (r *Registry) Order() ([]Migration, error) {
+// graph is the dependency edges over every registered migration,
+// derived once and shared by Order and Plan so neither builds it
+// twice. Edges come from two sources: within a domain, each version
+// depends on the previous registered version; across domains, each
+// declared After target.
+type graph struct {
+	byDomain   map[string][]string // domain -> its keys, sorted by version
+	dependsOn  map[string][]string // key -> keys it must come after
+	dependents map[string][]string // key -> keys that depend on it (the reverse edge)
+	indegree   map[string]int      // len(dependsOn[key])
+}
+
+// buildGraph derives graph from r's entries, erroring on an After
+// target that is not registered.
+func (r *Registry) buildGraph() (*graph, error) {
 	// byDomain groups keys by domain, sorted by version, to build the
 	// within-domain chain.
 	byDomain := make(map[string][]string)
@@ -120,7 +129,6 @@ func (r *Registry) Order() ([]Migration, error) {
 		}
 	}
 
-	// dependents is the reverse edge: target -> keys that depend on it.
 	dependents := make(map[string][]string, len(r.entries))
 	indegree := make(map[string]int, len(r.entries))
 	for key, deps := range dependsOn {
@@ -130,7 +138,18 @@ func (r *Registry) Order() ([]Migration, error) {
 		}
 	}
 
-	order, err := kahn(r.entries, indegree, dependents)
+	return &graph{byDomain: byDomain, dependsOn: dependsOn, dependents: dependents, indegree: indegree}, nil
+}
+
+// Order returns every registered migration in dependency order, ties
+// broken by (Domain, Version) so runs are deterministic.
+func (r *Registry) Order() ([]Migration, error) {
+	g, err := r.buildGraph()
+	if err != nil {
+		return nil, err
+	}
+
+	order, err := kahn(r.entries, g.indegree, g.dependents)
 	if err != nil {
 		return nil, err
 	}

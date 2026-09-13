@@ -20,40 +20,23 @@ func Apply(ctx context.Context, db *bun.DB) ([]Migration, error) {
 // Apply is the Registry-scoped form of the package-level Apply; see
 // its doc comment.
 func (r *Registry) Apply(ctx context.Context, db *bun.DB) (applied []Migration, err error) {
-	order, err := r.Order()
+	migrator, order, err := r.newMigrator(db)
 	if err != nil {
 		return nil, err
 	}
-
-	set := migrate.NewMigrations()
-	for _, m := range order {
-		set.Add(migrate.Migration{Name: m.String(), Comment: m.Name})
+	if err := initMigrator(ctx, migrator); err != nil {
+		return nil, err
 	}
-	migrator := migrate.NewMigrator(db, set)
-
-	if err := migrator.Init(ctx); err != nil {
-		return nil, fmt.Errorf("initializing migration tables: %w", err)
-	}
-	if err := migrator.Lock(ctx); err != nil {
-		// Bun's lock is a row in bun_migration_locks with no expiry, so
-		// a run killed mid-way leaves it behind; say how to recover.
-		return nil, fmt.Errorf("%w (a killed run leaves its row in bun_migration_locks; delete it to recover)", err)
-	}
-	defer func() {
-		if uerr := migrator.Unlock(ctx); uerr != nil && err == nil {
-			err = fmt.Errorf("unlocking migrations: %w", uerr)
-		}
-	}()
-
-	done, err := migrator.AppliedMigrations(ctx)
+	unlock, err := lockMigrator(ctx, migrator)
 	if err != nil {
-		return nil, fmt.Errorf("reading applied migrations: %w", err)
+		return nil, err
 	}
-	names := make(map[string]bool, len(done))
-	for _, d := range done {
-		names[d.Name] = true
+	defer unlock(&err)
+
+	names, _, group, err := appliedNamesAndRows(ctx, migrator)
+	if err != nil {
+		return nil, err
 	}
-	group := done.LastGroupID() + 1
 
 	for _, m := range order {
 		if names[m.String()] {
@@ -69,4 +52,61 @@ func (r *Registry) Apply(ctx context.Context, db *bun.DB) (applied []Migration, 
 		applied = append(applied, m)
 	}
 	return applied, nil
+}
+
+// newMigrator builds a Bun migrator over r's full registered order
+// (both Apply and Migrate need the same one), returning that order
+// alongside it so callers that need it (Apply) don't recompute it.
+func (r *Registry) newMigrator(db *bun.DB) (*migrate.Migrator, []Migration, error) {
+	order, err := r.Order()
+	if err != nil {
+		return nil, nil, err
+	}
+	set := migrate.NewMigrations()
+	for _, m := range order {
+		set.Add(migrate.Migration{Name: m.String(), Comment: m.Name})
+	}
+	return migrate.NewMigrator(db, set), order, nil
+}
+
+// initMigrator creates migrator's bookkeeping tables if they don't
+// already exist.
+func initMigrator(ctx context.Context, migrator *migrate.Migrator) error {
+	if err := migrator.Init(ctx); err != nil {
+		return fmt.Errorf("initializing migration tables: %w", err)
+	}
+	return nil
+}
+
+// lockMigrator takes migrator's run lock, wrapping a failure with a
+// recovery hint since Bun's lock is a row with no expiry — a run
+// killed mid-way leaves it behind. The returned unlock must be
+// deferred by the caller with a pointer to its own named error
+// return, so an unlock failure surfaces without masking an earlier one.
+func lockMigrator(ctx context.Context, migrator *migrate.Migrator) (unlock func(*error), err error) {
+	if err := migrator.Lock(ctx); err != nil {
+		return nil, fmt.Errorf("%w (a killed run leaves its row in bun_migration_locks; delete it to recover)", err)
+	}
+	return func(errp *error) {
+		if uerr := migrator.Unlock(ctx); uerr != nil && *errp == nil {
+			*errp = fmt.Errorf("unlocking migrations: %w", uerr)
+		}
+	}, nil
+}
+
+// appliedNamesAndRows reads migrator's applied migrations once,
+// returning the name set Plan needs, the rows (keyed by name)
+// MarkUnapplied needs, and the next group id for a fresh MarkApplied.
+func appliedNamesAndRows(ctx context.Context, migrator *migrate.Migrator) (names map[string]bool, rows map[string]migrate.Migration, nextGroup int64, err error) {
+	done, err := migrator.AppliedMigrations(ctx)
+	if err != nil {
+		return nil, nil, 0, fmt.Errorf("reading applied migrations: %w", err)
+	}
+	names = make(map[string]bool, len(done))
+	rows = make(map[string]migrate.Migration, len(done))
+	for _, d := range done {
+		names[d.Name] = true
+		rows[d.Name] = d
+	}
+	return names, rows, done.LastGroupID() + 1, nil
 }

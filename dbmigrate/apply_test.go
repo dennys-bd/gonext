@@ -174,3 +174,175 @@ func mustAdd(t *testing.T, r *Registry, m Migration, up, down MigrationFunc, dep
 		t.Fatalf("Add(%s): unexpected error: %v", m, err)
 	}
 }
+
+// migrateTestRegistry builds users/0001, users/0002, users/0003,
+// orders/0001 After(users,0002), orders/0002 — the same shape
+// TestRegistry_Plan exercises — with up/down that record their key
+// (prefixed "up:"/"down:") to calls, in call order.
+func migrateTestRegistry(t *testing.T, calls *[]string) *Registry {
+	t.Helper()
+	up := func(key string) MigrationFunc {
+		return func(ctx context.Context, db *bun.DB) error {
+			*calls = append(*calls, "up:"+key)
+			return nil
+		}
+	}
+	down := func(key string) MigrationFunc {
+		return func(ctx context.Context, db *bun.DB) error {
+			*calls = append(*calls, "down:"+key)
+			return nil
+		}
+	}
+
+	r := NewRegistry()
+	mustAdd(t, r, Migration{Domain: "users", Version: "0001", Name: "x"}, up("users/0001"), down("users/0001"))
+	mustAdd(t, r, Migration{Domain: "users", Version: "0002", Name: "x"}, up("users/0002"), down("users/0002"))
+	mustAdd(t, r, Migration{Domain: "users", Version: "0003", Name: "x"}, up("users/0003"), down("users/0003"))
+	mustAdd(t, r, Migration{Domain: "orders", Version: "0001", Name: "x"}, up("orders/0001"), down("orders/0001"), Dependency{Domain: "users", Version: "0002"})
+	mustAdd(t, r, Migration{Domain: "orders", Version: "0002", Name: "x"}, up("orders/0002"), down("orders/0002"))
+	return r
+}
+
+func migrationStrings(ms []Migration) []string {
+	out := make([]string, len(ms))
+	for i, m := range ms {
+		out[i] = m.String()
+	}
+	return out
+}
+
+func TestMigrate_ForwardToTargetAppliesOnlyClosure(t *testing.T) {
+	db := openTestDB(t)
+	var calls []string
+	r := migrateTestRegistry(t, &calls)
+
+	rolledBack, applied, err := r.Migrate(context.Background(), db, Target{Domain: "orders", Version: "0002"}, nil)
+	if err != nil {
+		t.Fatalf("Migrate: unexpected error: %v", err)
+	}
+
+	if len(rolledBack) != 0 {
+		t.Errorf("rolledBack = %v, want none", rolledBack)
+	}
+	wantApplied := []string{"users/0001", "users/0002", "orders/0001", "orders/0002"}
+	if got := migrationStrings(applied); !slices.Equal(got, wantApplied) {
+		t.Errorf("applied = %v, want %v", got, wantApplied)
+	}
+	wantCalls := []string{"up:users/0001", "up:users/0002", "up:orders/0001", "up:orders/0002"}
+	if !slices.Equal(calls, wantCalls) {
+		t.Errorf("calls = %v, want %v", calls, wantCalls)
+	}
+	if got := readNames(t, db); !slices.Equal(got, wantApplied) {
+		t.Errorf("readNames = %v, want %v", got, wantApplied)
+	}
+}
+
+func TestMigrate_BackwardRollsBackDependentsFirstAndUnmarks(t *testing.T) {
+	db := openTestDB(t)
+	var calls []string
+	r := migrateTestRegistry(t, &calls)
+
+	if _, err := r.Apply(context.Background(), db); err != nil {
+		t.Fatalf("Apply: unexpected error: %v", err)
+	}
+	calls = nil // only care about Migrate's own calls below
+
+	var confirmedWith []Migration
+	confirm := func(rollback []Migration) bool {
+		confirmedWith = rollback
+		return true
+	}
+
+	rolledBack, applied, err := r.Migrate(context.Background(), db, Target{Domain: "users", Version: "0001"}, confirm)
+	if err != nil {
+		t.Fatalf("Migrate: unexpected error: %v", err)
+	}
+
+	wantRolledBack := []string{"orders/0002", "orders/0001", "users/0003", "users/0002"}
+	if got := migrationStrings(rolledBack); !slices.Equal(got, wantRolledBack) {
+		t.Errorf("rolledBack = %v, want %v", got, wantRolledBack)
+	}
+	if got := migrationStrings(confirmedWith); !slices.Equal(got, wantRolledBack) {
+		t.Errorf("confirm was called with %v, want %v", got, wantRolledBack)
+	}
+	if len(applied) != 0 {
+		t.Errorf("applied = %v, want none", applied)
+	}
+
+	wantCalls := []string{"down:orders/0002", "down:orders/0001", "down:users/0003", "down:users/0002"}
+	if !slices.Equal(calls, wantCalls) {
+		t.Errorf("calls = %v, want %v", calls, wantCalls)
+	}
+	if got := readNames(t, db); !slices.Equal(got, []string{"users/0001"}) {
+		t.Errorf("readNames = %v, want [users/0001]", got)
+	}
+}
+
+// TestMigrate_StateChangedBetweenPlanAndLockAborts uses the confirm
+// callback — which runs between planning and locking — to stand in
+// for a concurrent run that changes the applied set. The confirmed
+// plan no longer matches, so nothing must execute.
+func TestMigrate_StateChangedBetweenPlanAndLockAborts(t *testing.T) {
+	db := openTestDB(t)
+	var calls []string
+	r := migrateTestRegistry(t, &calls)
+
+	// Only users/0001..0002 applied, so a rollback to users/0001 is
+	// planned as [users/0002].
+	if _, _, err := r.Migrate(context.Background(), db, Target{Domain: "users", Version: "0002"}, nil); err != nil {
+		t.Fatalf("Migrate (setup): unexpected error: %v", err)
+	}
+	calls = nil
+
+	confirm := func(rollback []Migration) bool {
+		// The "concurrent run": apply everything else before the lock.
+		if _, err := r.Apply(context.Background(), db); err != nil {
+			t.Fatalf("Apply (concurrent): unexpected error: %v", err)
+		}
+		calls = nil
+		return true
+	}
+
+	rolledBack, applied, err := r.Migrate(context.Background(), db, Target{Domain: "users", Version: "0001"}, confirm)
+	if !errors.Is(err, ErrStateChanged) {
+		t.Fatalf("Migrate: err = %v, want %v", err, ErrStateChanged)
+	}
+	if rolledBack != nil || applied != nil {
+		t.Errorf("Migrate: rolledBack = %v, applied = %v, want both nil", rolledBack, applied)
+	}
+	if len(calls) != 0 {
+		t.Errorf("Migrate: up/down calls after confirm = %v, want none", calls)
+	}
+	want := []string{"users/0001", "users/0002", "orders/0001", "orders/0002", "users/0003"}
+	if got := readNames(t, db); !slices.Equal(got, want) {
+		t.Errorf("readNames = %v, want the concurrent run's set %v", got, want)
+	}
+}
+
+func TestMigrate_NotConfirmedTouchesNothing(t *testing.T) {
+	db := openTestDB(t)
+	var calls []string
+	r := migrateTestRegistry(t, &calls)
+
+	if _, err := r.Apply(context.Background(), db); err != nil {
+		t.Fatalf("Apply: unexpected error: %v", err)
+	}
+	beforeNames := readNames(t, db)
+	calls = nil
+
+	confirm := func(rollback []Migration) bool { return false }
+
+	rolledBack, applied, err := r.Migrate(context.Background(), db, Target{Domain: "users", Version: "0001"}, confirm)
+	if !errors.Is(err, ErrNotConfirmed) {
+		t.Fatalf("Migrate: err = %v, want %v", err, ErrNotConfirmed)
+	}
+	if rolledBack != nil || applied != nil {
+		t.Errorf("Migrate: rolledBack = %v, applied = %v, want both nil", rolledBack, applied)
+	}
+	if len(calls) != 0 {
+		t.Errorf("Migrate: up/down calls = %v, want none", calls)
+	}
+	if got := readNames(t, db); !slices.Equal(got, beforeNames) {
+		t.Errorf("readNames changed to %v, want unchanged %v", got, beforeNames)
+	}
+}
