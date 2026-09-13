@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -105,6 +106,48 @@ func TestApply_UsesGoRunFromBackendDirWithRunnerFilename(t *testing.T) {
 	}
 	if len(gotArgs) != 2 || gotArgs[0] != "run" || gotArgs[1] != runnerFilename {
 		t.Errorf("Apply: args = %v, want [run %s]", gotArgs, runnerFilename)
+	}
+}
+
+func TestMigrate_PassesTargetAndYesToRunner(t *testing.T) {
+	root := t.TempDir()
+	writeGoMod(t, root, "example.com/foo")
+	mkBackendDir(t, root)
+
+	var gotArgs []string
+	defer stubRunFunc(t, func(ctx context.Context, dir, name string, args ...string) error {
+		gotArgs = args
+		return nil
+	})()
+
+	if err := Migrate(context.Background(), root, "users/0001", true); err != nil {
+		t.Fatalf("Migrate: unexpected error: %v", err)
+	}
+
+	want := []string{"run", runnerFilename, "users/0001", "--yes"}
+	if !slices.Equal(gotArgs, want) {
+		t.Errorf("Migrate: args = %v, want %v", gotArgs, want)
+	}
+}
+
+func TestMigrate_OmitsYesFlagWhenNotSet(t *testing.T) {
+	root := t.TempDir()
+	writeGoMod(t, root, "example.com/foo")
+	mkBackendDir(t, root)
+
+	var gotArgs []string
+	defer stubRunFunc(t, func(ctx context.Context, dir, name string, args ...string) error {
+		gotArgs = args
+		return nil
+	})()
+
+	if err := Migrate(context.Background(), root, "users/zero", false); err != nil {
+		t.Fatalf("Migrate: unexpected error: %v", err)
+	}
+
+	want := []string{"run", runnerFilename, "users/zero"}
+	if !slices.Equal(gotArgs, want) {
+		t.Errorf("Migrate: args = %v, want %v", gotArgs, want)
 	}
 }
 

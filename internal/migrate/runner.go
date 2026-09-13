@@ -34,13 +34,32 @@ var domainNameRE = regexp.MustCompile(`^[a-z0-9_]+$`)
 var runnerTemplate []byte
 
 // runFunc executes the materialized runner; overridden in tests to
-// avoid actually invoking `go run` against a real database.
-var runFunc = xexec.Run
+// avoid actually invoking `go run` against a real database. It is
+// the interactive variant so the runner can read the developer's
+// answer to the rollback confirmation.
+var runFunc = xexec.RunInteractive
 
 // Apply materializes the migration runner under root/backend with
 // root's module path and its migration imports substituted in, runs
 // it via `go run`, and removes it afterward regardless of outcome.
 func Apply(ctx context.Context, root string) error {
+	return run(ctx, root)
+}
+
+// Migrate is Apply's sibling for bringing one domain to one version:
+// same materialize/run/cleanup, with target and, when yes is set,
+// --yes passed as extra arguments to the runner.
+func Migrate(ctx context.Context, root string, target string, yes bool) error {
+	args := []string{target}
+	if yes {
+		args = append(args, "--yes")
+	}
+	return run(ctx, root, args...)
+}
+
+// run is Apply and Migrate's shared materialize/run/cleanup, with
+// runnerArgs passed through to the runner after runnerFilename.
+func run(ctx context.Context, root string, runnerArgs ...string) error {
 	imports, err := migrationImports(root)
 	if err != nil {
 		return err
@@ -53,7 +72,8 @@ func Apply(ctx context.Context, root string) error {
 	}
 	defer remove()
 
-	if err := runFunc(ctx, backendDir, "go", "run", runnerFilename); err != nil {
+	args := append([]string{"run", runnerFilename}, runnerArgs...)
+	if err := runFunc(ctx, backendDir, "go", args...); err != nil {
 		return fmt.Errorf("running migrations: %w", err)
 	}
 	return nil
