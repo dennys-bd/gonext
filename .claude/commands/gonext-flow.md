@@ -88,7 +88,7 @@ Recorded here so routing is visible and intentional, not incidental:
 | 5 — Code Review (Go) | `ecc:go-reviewer` | `sonnet` | ECC's own default for this agent |
 | 5 — Code Review (frontend) | `ecc:typescript-reviewer` + `ecc:react-reviewer` | `sonnet` | ECC's own default for these agents |
 | 5 — E2E | `ecc:e2e-runner` | `sonnet` | ECC's own default |
-| 6 — Security | `ecc:security-reviewer` (via `/security-scan`) | `sonnet` | ECC's own default; escalate to `opus` by hand for a security-sensitive surface (auth, payments, crypto) |
+| 6 — Security | `ecc:security-reviewer` on the branch diff | `sonnet` | ECC's own default; escalate to `opus` by hand for a security-sensitive surface (auth, payments, crypto) |
 | 7 — PR | `/pr` inline (no subagent) | session model | mechanical push/template-fill/gh-metadata work |
 
 If a stage's actual risk doesn't match this table for a given task (e.g. a
@@ -220,8 +220,18 @@ CRITICAL findings required non-trivial changes.
 
 ## Stage 6 — Security Review
 
-Run `/security-scan` (ECC, backed by `ecc:security-reviewer` /
-AgentShield). Fix CRITICAL/HIGH findings; re-run to confirm before Stage 7.
+Dispatch `ecc:security-reviewer` against the branch diff (`git diff
+main...HEAD` plus untracked files), scoped to the project's own code:
+Go under `cmd/`, `internal/`, `auth/`, `dbmigrate/`, and whatever the
+change scaffolds into `templates/`. It looks for injection, unsafe
+subprocess argv, path handling, secrets, and missing validation at trust
+boundaries. Fix CRITICAL/HIGH findings; re-run to confirm before Stage 7.
+
+Not `/security-scan`: that command runs AgentShield, which audits agent
+configuration (`CLAUDE.md` prompt-defense heuristics, hooks, MCP servers)
+rather than the code, and its findings on this repo are baseline noise
+unrelated to any given branch. The gate is about the code the branch
+changes.
 
 ## Stage 7 — PR
 
@@ -246,8 +256,8 @@ After the PR is opened:
 1. Spec/design approved by user (Stage 1) — HARD GATE, no exceptions.
    Satisfied up front when the flow is entered with an approved spec file.
 2. Plan approved by user (Stage 2, architectural path only).
-3. Code review clean of CRITICAL/HIGH (Stage 5) before security scan.
-4. Security scan clean of CRITICAL/HIGH (Stage 6) before PR.
+3. Code review clean of CRITICAL/HIGH (Stage 5) before security review.
+4. Security review of the diff clean of CRITICAL/HIGH (Stage 6) before PR.
 
 ## Explicitly Out of Scope
 

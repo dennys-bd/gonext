@@ -17,10 +17,9 @@ import (
 
 // InitializeApp builds the full dependency graph — config, logger, DB
 // pool, HTTP server, and every domain's endpoint registration — and
-// returns the assembled App, a cleanup func (closing the DB pool),
-// and any error hit along the way. Run `wire ./backend/...`
-// (see `make generate`) to regenerate wire_gen.go after changing the
-// provider list below.
+// returns the assembled App, a cleanup func (closing the DB pool), and
+// any error hit along the way. Run `gonext generate` to regenerate
+// wire_gen.go after changing the provider list below.
 func InitializeApp(ctx context.Context) (*App, func(), error) {
 	wire.Build(
 		config.Load,

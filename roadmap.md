@@ -143,11 +143,11 @@ When generating a new repository from this template, the scaffolding tool (`cmd/
 
 The CLI has two distinct command families. **Scaffold-time** commands run once, at project generation (*Scaffolding CLI Design Concept* above) — they select feature packs and prune dead code. **Dev-loop** commands run repeatedly throughout the project's life, after generation, and are how the CLI keeps paying for itself day to day.
 
-Dev-loop commands should be thin wrappers around existing `make` targets where one already exists (e.g. Postgres, wire DI), rather than duplicating that logic — the CLI adds the interactive/templated parts (name prompts, file generation, boilerplate insertion) on top.
+Dev-loop commands own their logic; `make`, lefthook and CI are callers of the CLI, never a second copy of the command.
 
 Scaffold-time is `gonext init` — the prompt flow above, plus pruning and the first migration. `gonext add <pack>` belongs to the same family, retrofitting a pack onto an already-generated project; `gonext add agent <tool>…` is its first member, layering a tool's pointer files onto a project scaffolded without them (refusing to overwrite an existing file unless `--force` is given).
 
-Dev-loop is `gonext migrate`, `gonext dev` and `gonext generate migration <domain> <name>` today — the last writes the next-numbered migration skeleton into a domain. `gonext migrate <domain>/<version>` brings one domain to one version in either direction (`<domain>/zero` meaning none of it applied), confirming a non-empty rollback unless `--yes`. The rest of the generator set — resource, worker, page, wire refresh, doctor — is tracked on the board rather than inventoried here.
+Dev-loop is `gonext migrate`, `gonext dev`, `gonext generate migration <domain> <name>`, and `gonext generate`/`gonext generate --check` today — the last two run (or check) every codegen step a project has, wire today. `gonext generate migration <domain> <name>` writes the next-numbered migration skeleton into a domain. `gonext migrate <domain>/<version>` brings one domain to one version in either direction (`<domain>/zero` meaning none of it applied), confirming a non-empty rollback unless `--yes`. The rest of the generator set — resource, worker, page, doctor — is tracked on the board rather than inventoried here.
 
 ---
 

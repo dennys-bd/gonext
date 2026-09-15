@@ -14,7 +14,7 @@ jobs:
       - uses: jdx/mise-action@v2
       - run: make vet
       - run: make lint
-      - run: make generate-check
+      - run: gonext generate --check
       - run: make openapi-check
       - run: make vulncheck
       - run: make build
