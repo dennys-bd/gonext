@@ -19,9 +19,7 @@ import (
 	apipkg "[PROJECT-NAME]/backend/internal/presentation/api"
 )
 
-// rejectingResolver stands in for a provider with no valid sessions:
-// the example track's tests care that the guard is wired, not that
-// the users track works.
+// rejectingResolver stands in for a provider with no valid sessions.
 type rejectingResolver struct{}
 
 func (rejectingResolver) Resolve(context.Context, string) (auth.Identity, error) {
@@ -44,8 +42,6 @@ func newTestAPI(t *testing.T) (humatest.TestAPI, *application.StubService) {
 	return api, svc
 }
 
-// Creating a stub is a write, so it requires a session; reading one
-// does not. This is the reference every generated project copies.
 func TestCreateStub_RequiresASession(t *testing.T) {
 	api, _ := newTestAPI(t)
 
@@ -55,9 +51,7 @@ func TestCreateStub_RequiresASession(t *testing.T) {
 	}
 }
 
-// GET /stubs/{id} declares no security requirement, so it stays
-// reachable without a credential. The stub is seeded through the
-// service rather than the API, since POST /stubs is now guarded.
+// The stub is seeded through the service, not the API, since POST /stubs is guarded.
 func TestGetStub_IsPublic(t *testing.T) {
 	api, svc := newTestAPI(t)
 
@@ -81,9 +75,7 @@ func TestGetStub_NotFound(t *testing.T) {
 	}
 }
 
-// failingStubRepository always fails with driver-shaped text, standing
-// in for a Postgres error the example track's group has no mapping
-// for.
+// failingStubRepository fails with driver-shaped text the group has no mapping for.
 type failingStubRepository struct{}
 
 func (failingStubRepository) Create(context.Context, domain.Stub) error {
@@ -94,10 +86,8 @@ func (failingStubRepository) Get(context.Context, string) (domain.Stub, error) {
 	return domain.Stub{}, errors.New(`pq: relation stubs does not exist`)
 }
 
-// The generic mapped/unmapped/ordering behaviour is proven once in
-// httpx/errors_test.go; this is the per-track assertion that the
-// example group is actually wired with a logger and does not leak —
-// closing the defect this migration exists to fix.
+// Generic mapped/unmapped/ordering behaviour is proven once in httpx/errors_test.go;
+// this is the per-track assertion that the example group is actually wired.
 func TestGetStub_UnmappedRepositoryErrorDoesNotLeak(t *testing.T) {
 	const secretText = `pq: relation stubs does not exist`
 

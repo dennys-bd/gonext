@@ -16,10 +16,9 @@ var ErrNameRequired = errors.New("project name is required")
 // the caller should fall back to the interactive prompt.
 var errNeedsPrompt = errors.New("prompt required")
 
-// ResolveSlugArg decides how to obtain the project name from the
-// name argument. It returns name unchanged if non-empty; otherwise it
-// returns errNeedsPrompt when isTTY is true (caller should prompt via
-// PromptSlug), or ErrNameRequired when isTTY is false (hard error).
+// ResolveSlugArg returns name unchanged if non-empty; otherwise
+// errNeedsPrompt when isTTY (caller should prompt via PromptSlug), or
+// ErrNameRequired when not.
 func ResolveSlugArg(name string, isTTY bool) (string, error) {
 	if name != "" {
 		return name, nil

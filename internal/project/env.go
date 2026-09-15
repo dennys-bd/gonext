@@ -11,16 +11,9 @@ import (
 
 const envFilename = ".env"
 
-// LoadEnv sets every KEY=VALUE pair in root/.env that is not already
-// present in the environment, so a subcommand (and the runner or
-// server it starts) sees the project's local configuration without
-// the caller exporting anything. Variables already exported win, which
-// is what lets a Makefile target override a single value
-// (DATABASE_URL=… gonext migrate). A missing .env is not an error.
-//
-// The format is the subset .env.example uses: one KEY=VALUE per line,
-// blank lines and # comments ignored, an optional export prefix, and
-// optional matching quotes around the value.
+// LoadEnv sets every KEY=VALUE pair in root/.env that is not already present
+// in the environment, so a variable a caller already exported (e.g.
+// `DATABASE_URL=… gonext migrate`) wins. A missing .env is not an error.
 func LoadEnv(root string) error {
 	f, err := os.Open(filepath.Join(root, envFilename))
 	if errors.Is(err, os.ErrNotExist) {

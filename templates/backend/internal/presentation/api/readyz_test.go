@@ -33,10 +33,6 @@ func TestReadyz_OK(t *testing.T) {
 	}
 }
 
-// A ping failure reports through readyzOutput's own Status field with
-// a nil error, not through the error return — the group wrapper only
-// post-processes a non-nil error, so this 503 must survive the move
-// onto httpx.Get unchanged.
 func TestReadyz_Unavailable(t *testing.T) {
 	_, api := humatest.New(t)
 	RegisterReadyz(api, fakePinger{err: errors.New("connection refused")}, slog.New(slog.NewTextHandler(io.Discard, nil)))

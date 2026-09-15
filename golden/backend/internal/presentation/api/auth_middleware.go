@@ -19,10 +19,8 @@ const bearerPrefix = "Bearer "
 type AuthConfig struct {
 	// CookieName is the cookie the credential travels in.
 	CookieName string
-	// AllowBearer additionally accepts an Authorization: Bearer
-	// header. Off by default: the only client this project ships is a
-	// browser, and advertising a transport the project neither
-	// documents nor tests would make the published API contract lie.
+	// AllowBearer additionally accepts an Authorization: Bearer header.
+	// Off by default, since the project's only client is a browser.
 	AllowBearer bool
 }
 
@@ -31,14 +29,9 @@ func ProvideAuthConfig() AuthConfig {
 	return AuthConfig{CookieName: auth.DefaultCookieName, AllowBearer: false}
 }
 
-// NewAuthMiddleware returns Huma middleware that enforces whatever
-// each operation declared in its Security field and injects the
-// resolved identity for handlers to read.
-//
-// An operation that declares nothing never has its credential read at
-// all, so /healthz and /readyz cost no lookup even when a probe
-// carries a cookie — and a stale cookie cannot lock a user out of
-// POST /users/login, which declares nothing either.
+// NewAuthMiddleware returns Huma middleware enforcing each operation's
+// declared Security and injecting the resolved identity. An operation
+// declaring nothing never has its credential read at all.
 func NewAuthMiddleware(
 	api huma.API,
 	resolver auth.Resolver,
@@ -72,9 +65,7 @@ func NewAuthMiddleware(
 				_ = huma.WriteErr(api, ctx, http.StatusUnauthorized, "authentication required")
 				return
 			}
-			// Not an authentication outcome — the provider itself
-			// failed. Saying "unauthenticated" here would send every
-			// client to the login page during an outage.
+			// Provider failure, not an auth outcome: don't send clients to login during an outage.
 			logger.ErrorContext(ctx.Context(), "auth: resolving credential", "error", err)
 			_ = huma.WriteErr(api, ctx, http.StatusInternalServerError, "internal server error")
 			return
@@ -103,8 +94,7 @@ func extractToken(ctx huma.Context, cfg AuthConfig) string {
 	return ""
 }
 
-// satisfies reports whether identity meets every role and permission
-// the rule requires. Requirements are ANDed.
+// satisfies reports whether identity meets every role and permission (ANDed) the rule requires.
 func satisfies(identity auth.Identity, rule auth.Rule) bool {
 	for _, role := range rule.Roles {
 		if !identity.HasRole(role) {

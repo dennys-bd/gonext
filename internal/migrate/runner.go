@@ -33,10 +33,8 @@ var domainNameRE = regexp.MustCompile(`^[a-z0-9_]+$`)
 //go:embed runner_template.go.tmpl
 var runnerTemplate []byte
 
-// runFunc executes the materialized runner; overridden in tests to
-// avoid actually invoking `go run` against a real database. It is
-// the interactive variant so the runner can read the developer's
-// answer to the rollback confirmation.
+// runFunc is the interactive variant so the runner can read the developer's
+// rollback confirmation; overridden in tests.
 var runFunc = xexec.RunInteractive
 
 // Apply materializes the migration runner under root/backend with
@@ -80,10 +78,8 @@ func run(ctx context.Context, root string, runnerArgs ...string) error {
 }
 
 // migrationImports scans root/backend/*/migrations/ and renders one
-// blank-import line per directory holding at least one non-test
-// Go file, sorted by domain. backend/internal is never a domain.
-// No such directory at all renders "" — the runner then imports
-// nothing and Apply reports nothing to run.
+// blank-import line per directory holding at least one non-test Go file,
+// sorted by domain. No matching directory renders "".
 func migrationImports(root string) (string, error) {
 	backendDir := filepath.Join(root, "backend")
 	entries, err := os.ReadDir(backendDir)

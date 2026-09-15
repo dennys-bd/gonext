@@ -30,9 +30,7 @@ var (
 	ErrEmailNotConfirmed = errors.New("users: email is not confirmed")
 	// ErrUserNotFound is returned when a User cannot be found.
 	ErrUserNotFound = errors.New("users: user not found")
-	// ErrEmailTaken is returned when registering an email that already
-	// has an account. Registration deliberately reveals this — see the
-	// design doc's registration section for the enumeration trade-off.
+	// ErrEmailTaken is returned when registering an email that already has an account.
 	ErrEmailTaken = errors.New("users: email already registered")
 )
 
@@ -47,9 +45,8 @@ type User struct {
 	UpdatedAt       time.Time
 }
 
-// NewUser constructs a User, validating that email is non-blank. It
-// takes an already-hashed password: hashing is an application-layer
-// concern, so the domain never sees a plaintext password.
+// NewUser constructs a User, validating that email is non-blank.
+// passwordHash must already be hashed; the domain never hashes plaintext itself.
 func NewUser(id, email, passwordHash, role string, now time.Time) (User, error) {
 	email = NormalizeEmail(email)
 	if email == "" {

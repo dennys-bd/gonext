@@ -24,10 +24,8 @@ type App struct {
 	ShutdownTimeout time.Duration
 }
 
-// NewApp assembles App. Its marker parameters (HealthzRegistered,
-// ReadyzRegistered, example.Registered, users.Registered) aren't
-// read; depending on them is what forces wire to run every
-// registration before InitializeApp returns.
+// NewApp assembles App. Its marker parameters aren't read; depending on them
+// is what forces wire to run every registration before InitializeApp returns.
 func NewApp(
 	e *echo.Echo,
 	logger *slog.Logger,

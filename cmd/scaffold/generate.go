@@ -62,10 +62,8 @@ func runGenerate(args []string) int {
 	return 0
 }
 
-// parseGenerateArgs classifies `gonext generate`'s arguments: no
-// arguments runs every step, `--check` checks every step, a leading
-// `migration` defers to the reserved migration subcommand, and
-// anything else is a usage error.
+// parseGenerateArgs classifies `gonext generate`'s arguments: no arguments,
+// `--check`, a leading `migration`, or anything else (a usage error).
 func parseGenerateArgs(args []string) (generateMode, error) {
 	if len(args) > 0 && args[0] == "migration" {
 		return generateMigration, nil

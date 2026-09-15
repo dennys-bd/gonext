@@ -26,10 +26,7 @@ func RequireOneRow(res sql.Result, notFound error) error {
 	return nil
 }
 
-// IsUniqueViolation reports whether err is Postgres' unique_violation
-// (SQLSTATE 23505). Letting an insert fail on the constraint (rather
-// than a prior existence check) is what makes concurrent inserts of
-// the same unique value race-proof: they cannot both win.
+// IsUniqueViolation reports whether err is Postgres' unique_violation (SQLSTATE 23505).
 func IsUniqueViolation(err error) bool {
 	var pgErr *pgconn.PgError
 	return errors.As(err, &pgErr) && pgErr.Code == postgresUniqueViolationCode

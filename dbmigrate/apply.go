@@ -10,9 +10,7 @@ import (
 
 // Apply applies every registered migration not yet recorded in the
 // database, in dependency order, and returns the ones it applied.
-// It stops at the first failure: earlier ones stay applied and
-// marked, the failing one is not marked, and the returned slice
-// holds what was applied before it.
+// It stops at the first failure, leaving earlier ones applied.
 func Apply(ctx context.Context, db *bun.DB) ([]Migration, error) {
 	return defaultRegistry.Apply(ctx, db)
 }
@@ -54,9 +52,7 @@ func (r *Registry) Apply(ctx context.Context, db *bun.DB) (applied []Migration, 
 	return applied, nil
 }
 
-// newMigrator builds a Bun migrator over r's full registered order
-// (both Apply and Migrate need the same one), returning that order
-// alongside it so callers that need it (Apply) don't recompute it.
+// newMigrator builds a Bun migrator over r's registered order.
 func (r *Registry) newMigrator(db *bun.DB) (*migrate.Migrator, []Migration, error) {
 	order, err := r.Order()
 	if err != nil {
@@ -78,11 +74,9 @@ func initMigrator(ctx context.Context, migrator *migrate.Migrator) error {
 	return nil
 }
 
-// lockMigrator takes migrator's run lock, wrapping a failure with a
-// recovery hint since Bun's lock is a row with no expiry — a run
-// killed mid-way leaves it behind. The returned unlock must be
-// deferred by the caller with a pointer to its own named error
-// return, so an unlock failure surfaces without masking an earlier one.
+// lockMigrator takes migrator's run lock. Bun's lock has no expiry,
+// so a killed run leaves it behind; the wrapped error hints at that.
+// Callers must defer the returned unlock with their own named error.
 func lockMigrator(ctx context.Context, migrator *migrate.Migrator) (unlock func(*error), err error) {
 	if err := migrator.Lock(ctx); err != nil {
 		return nil, fmt.Errorf("%w (a killed run leaves its row in bun_migration_locks; delete it to recover)", err)
@@ -94,9 +88,8 @@ func lockMigrator(ctx context.Context, migrator *migrate.Migrator) (unlock func(
 	}, nil
 }
 
-// appliedNamesAndRows reads migrator's applied migrations once,
-// returning the name set Plan needs, the rows (keyed by name)
-// MarkUnapplied needs, and the next group id for a fresh MarkApplied.
+// appliedNamesAndRows reads migrator's applied migrations once: the
+// name set, the rows keyed by name, and the next group id to use.
 func appliedNamesAndRows(ctx context.Context, migrator *migrate.Migrator) (names map[string]bool, rows map[string]migrate.Migration, nextGroup int64, err error) {
 	done, err := migrator.AppliedMigrations(ctx)
 	if err != nil {

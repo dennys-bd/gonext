@@ -37,9 +37,7 @@ func TestParseTarget(t *testing.T) {
 	}
 }
 
-// planRegistry builds the registry TestRegistry_Plan's table exercises:
-// users/0001, users/0002, users/0003, orders/0001 After(users,0002),
-// orders/0002, example/0001.
+// planRegistry builds the registry TestRegistry_Plan's table exercises.
 func planRegistry(t *testing.T) *Registry {
 	t.Helper()
 	r := NewRegistry()

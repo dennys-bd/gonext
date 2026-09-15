@@ -10,11 +10,9 @@ import (
 	"time"
 )
 
-// DefaultStopTimeout is how long Supervisor waits after SIGTERM
-// before falling back to SIGKILL. It's set comfortably longer than
-// templates/backend's default ShutdownTimeout (10s, see
-// templates/backend/internal/config/config.go) so a normal graceful
-// shutdown always has room to finish first.
+// DefaultStopTimeout is how long Supervisor waits after SIGTERM before
+// falling back to SIGKILL. It's set longer than the generated backend's
+// default ShutdownTimeout so a graceful shutdown has room to finish first.
 const DefaultStopTimeout = 15 * time.Second
 
 // Option configures a Supervisor.

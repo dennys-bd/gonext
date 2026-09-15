@@ -18,10 +18,9 @@ var (
 	_ domain.TokenRepository = (*TokenRepository)(nil)
 )
 
-// Store is an in-memory domain.Store. It also satisfies
-// domain.TxRunner by running fn directly against itself: the fakes
-// have no rollback semantics, which is enough for use-case tests that
-// assert on behaviour rather than on transactional isolation.
+// Store is an in-memory domain.Store that also satisfies domain.TxRunner by
+// running fn directly against itself — no rollback semantics, which is enough
+// for behavioural use-case tests.
 type Store struct {
 	users  *UserRepository
 	tokens *TokenRepository
@@ -150,10 +149,8 @@ func (r *TokenRepository) Get(_ context.Context, id string) (domain.Token, error
 	return t, nil
 }
 
-// MarkUsed records usedAt as the consumption time for id. Like the
-// Postgres adapter it only matches an unconsumed token, so a second
-// consumption reports domain.ErrTokenNotFound rather than silently
-// succeeding.
+// MarkUsed records usedAt as the consumption time for id. A second consumption
+// reports domain.ErrTokenNotFound rather than silently succeeding.
 func (r *TokenRepository) MarkUsed(_ context.Context, id string, usedAt time.Time) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()

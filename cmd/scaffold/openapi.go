@@ -9,10 +9,8 @@ import (
 	"github.com/dennys-bd/gonext/internal/project"
 )
 
-// runOpenAPI implements `gonext openapi [--check]` and returns the
-// process exit code. It regenerates the generated project's
-// docs/openapi.yaml and typed frontend client, or with --check only
-// reports whether the committed document is stale.
+// runOpenAPI implements `gonext openapi [--check]`, regenerating
+// docs/openapi.yaml and the frontend client, or just checking staleness.
 func runOpenAPI(args []string) int {
 	check := len(args) == 1 && args[0] == "--check"
 	if len(args) > 0 && !check {

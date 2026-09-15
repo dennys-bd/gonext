@@ -27,13 +27,9 @@ type readyzOutput struct {
 	}
 }
 
-// RegisterReadyz registers the cross-cutting GET /readyz readiness
-// check, which pings db to confirm the server can actually serve
-// DB-backed requests. Unlike /healthz, a failure here is non-fatal:
-// it is reported through the output's own Status field rather than
-// the error return, so it renders 503 and callers back off and retry
-// — the group wrapper only post-processes a non-nil error, so this
-// path is untouched by it.
+// RegisterReadyz registers the cross-cutting GET /readyz readiness check,
+// which pings db. A failed ping is reported via the output's own Status
+// field, rendering 503, not via the error return.
 func RegisterReadyz(api huma.API, db pinger, logger *slog.Logger) {
 	g := httpx.NewGroup(api, "", "System", logger)
 

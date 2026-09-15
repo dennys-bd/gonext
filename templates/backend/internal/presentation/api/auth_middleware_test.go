@@ -20,12 +20,9 @@ import (
 	"[PROJECT-NAME]/backend/internal/presentation/httpx"
 )
 
-// errBackendDown stands in for an infrastructure failure inside a
-// Resolver — a database outage, not a bad credential.
+// errBackendDown stands in for an infrastructure failure, not a bad credential.
 var errBackendDown = errors.New("backend down")
 
-// fakeResolver resolves exactly one token and fails everything else
-// the way a real provider would.
 type fakeResolver struct {
 	token    string
 	identity auth.Identity
@@ -213,9 +210,6 @@ func TestAuthMiddleware(t *testing.T) {
 	}
 }
 
-// The security scheme must be in the published document: it is what
-// tells the generated TypeScript client and the Bruno collection
-// which calls need a session.
 func TestNewHumaAPI_PublishesSecurityScheme(t *testing.T) {
 	humaAPI := api.NewHumaAPI(
 		echo.New(),

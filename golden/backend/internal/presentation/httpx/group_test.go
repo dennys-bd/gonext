@@ -34,10 +34,6 @@ func okHandler(_ *httpx.Ctx, _ *groupInput) (*groupOutput, error) {
 	return out, nil
 }
 
-// A group owns its track's path prefix: the path a route registers
-// under is the prefix concatenated with the per-route suffix,
-// verbatim. This is the whole reason /stubs and "Example" appear once
-// per track instead of once per route.
 func TestGroup_ComposesPath(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -48,9 +44,7 @@ func TestGroup_ComposesPath(t *testing.T) {
 		{"collection root passes the empty suffix", "/stubs", "", "/stubs"},
 		{"a suffix appends to the prefix", "/stubs", "/{id}", "/stubs/{id}"},
 		{"an empty prefix leaves the path untouched", "", "/healthz", "/healthz"},
-		// "/" is not a synonym for "": it composes to /stubs/, a
-		// different route. Documented behaviour, pinned so nobody
-		// "fixes" it into silently trimming the slash.
+		// "/" is not a synonym for "": pinned so nobody trims it away.
 		{"a slash suffix keeps its trailing slash", "/stubs", "/", "/stubs/"},
 	}
 
@@ -75,9 +69,6 @@ func TestGroup_ComposesPath(t *testing.T) {
 	}
 }
 
-// Every operation registered through a group carries exactly the
-// group's tag — one tag, not the group's plus whatever huma defaults
-// to, so the generated OpenAPI groups the track cleanly.
 func TestGroup_AppliesExactlyItsTag(t *testing.T) {
 	_, api := humatest.New(t)
 	g := httpx.NewGroup(api, "/stubs", "Example", discardLogger())
@@ -96,8 +87,6 @@ func TestGroup_AppliesExactlyItsTag(t *testing.T) {
 	}
 }
 
-// Errors returns the group so a track declares its prefix, tag and
-// error policy as one expression.
 func TestGroup_ErrorsReturnsTheGroup(t *testing.T) {
 	_, api := humatest.New(t)
 	g := httpx.NewGroup(api, "/stubs", "Example", discardLogger())
@@ -115,8 +104,6 @@ func registeredPaths(paths map[string]*huma.PathItem) []string {
 	return out
 }
 
-// All five verbs register under the group and differ only in method,
-// so a track's route surface reads as one call per endpoint.
 func TestVerbs_RegisterTheirMethod(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -152,9 +139,6 @@ func TestVerbs_RegisterTheirMethod(t *testing.T) {
 	}
 }
 
-// A nil logger is rejected at construction rather than at the first
-// unmapped error, so a wiring mistake surfaces at boot instead of on
-// the 500 path, where something has already gone wrong.
 func TestNewGroup_RejectsNilLogger(t *testing.T) {
 	_, api := humatest.New(t)
 

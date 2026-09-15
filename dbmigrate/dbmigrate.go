@@ -1,8 +1,6 @@
 // Package dbmigrate registers a generated project's per-domain
-// migrations, orders them across domains by declared dependencies,
-// and applies the pending ones with Bun's migration table for
-// bookkeeping. It depends on Bun, which every generated backend
-// already depends on, and on nothing from the CLI.
+// migrations, orders them by declared dependencies, and applies
+// pending ones using Bun's migration table for bookkeeping.
 package dbmigrate
 
 import (
@@ -69,9 +67,7 @@ func NewRegistry() *Registry {
 }
 
 // Add records m with its up/down functions and cross-domain
-// dependencies. A duplicate (Domain, Version) is an error rather than
-// a panic, since Registry is also built directly by tests and
-// Register's own callers.
+// dependencies. A duplicate (Domain, Version) returns an error.
 func (r *Registry) Add(m Migration, up, down MigrationFunc, deps ...Dependency) error {
 	key := m.String()
 	if _, ok := r.entries[key]; ok {
@@ -82,10 +78,7 @@ func (r *Registry) Add(m Migration, up, down MigrationFunc, deps ...Dependency) 
 }
 
 // graph is the dependency edges over every registered migration,
-// derived once and shared by Order and Plan so neither builds it
-// twice. Edges come from two sources: within a domain, each version
-// depends on the previous registered version; across domains, each
-// declared After target.
+// shared by Order and Plan so neither builds it twice.
 type graph struct {
 	byDomain   map[string][]string // domain -> its keys, sorted by version
 	dependsOn  map[string][]string // key -> keys it must come after
@@ -214,14 +207,8 @@ func lessKey(entries map[string]entry, a, b string) bool {
 	return ma.Version < mb.Version
 }
 
-// cycleError builds the "migration dependency cycle: ..." error for
-// the nodes left with in-degree >= 1 after Kahn's algorithm stalls.
-// Every remaining node depends on at least one other remaining node,
-// since anything depending only on already-ordered nodes would have
-// reached in-degree 0. Starting from the smallest remaining key and
-// walking dependsOn (rebuilt here as the inverse of dependents,
-// restricted to the remaining nodes) must therefore revisit a node,
-// and that repeat bounds a cycle.
+// cycleError builds the "migration dependency cycle: ..." error from
+// the nodes still unordered after Kahn's algorithm stalls.
 func cycleError(entries map[string]entry, remaining map[string]int, dependents map[string][]string) error {
 	// dependsOn restricted to remaining nodes, derived from dependents.
 	dependsOn := make(map[string][]string, len(remaining))
@@ -259,9 +246,8 @@ func cycleError(entries map[string]entry, remaining map[string]int, dependents m
 		cur = deps[0]
 	}
 
-	// Rotate path (which currently ends where it repeats) so it starts
-	// at its smallest key. path's last element already equals its
-	// first; drop the duplicate before rotating and re-close it.
+	// Rotate to start at the smallest key for a deterministic message;
+	// drop the duplicate closing node first, then re-close.
 	cycle := path[:len(path)-1]
 	minIdx := 0
 	for i := 1; i < len(cycle); i++ {
@@ -275,8 +261,7 @@ func cycleError(entries map[string]entry, remaining map[string]int, dependents m
 	return fmt.Errorf("migration dependency cycle: %s", strings.Join(rotated, " -> "))
 }
 
-// sortStrings sorts s in place; a tiny helper to avoid importing
-// "sort" for a single call site each.
+// sortStrings sorts s in place, to avoid importing "sort" for one call site.
 func sortStrings(s []string) {
 	for i := 1; i < len(s); i++ {
 		for j := i; j > 0 && s[j] < s[j-1]; j-- {
@@ -288,10 +273,8 @@ func sortStrings(s []string) {
 var defaultRegistry = NewRegistry()
 
 // Register records the calling file as a migration. It must be
-// called from init() in a file at backend/<domain>/migrations/
-// <NNNN>_<name>.go; any other path panics, since a migration in the
-// wrong place is a programming error that should fail the build's
-// first run, not be silently skipped.
+// called from init() in a file at
+// backend/<domain>/migrations/<NNNN>_<name>.go; any other path panics.
 func Register(up, down MigrationFunc, opts ...Option) {
 	_, file, _, ok := runtime.Caller(1)
 	if !ok {
@@ -313,8 +296,7 @@ func Register(up, down MigrationFunc, opts ...Option) {
 var pathRE = regexp.MustCompile(`backend/([a-z0-9_]+)/migrations/(\d{4})_([a-z0-9_]+)\.go$`)
 
 // parsePath derives (domain, version, name) from a migration file's
-// path, matched as a suffix so it holds under -trimpath and in any
-// checkout location.
+// path, matched as a suffix so it holds under -trimpath.
 func parsePath(file string) (Migration, error) {
 	match := pathRE.FindStringSubmatch(filepath.ToSlash(file))
 	if match == nil {

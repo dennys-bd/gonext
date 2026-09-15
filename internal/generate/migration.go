@@ -16,10 +16,9 @@ import (
 var migrationNameRE = regexp.MustCompile(`^[a-z0-9_]+$`)
 var migrationFileRE = regexp.MustCompile(`^(\d{4})_`)
 
-// Register's two arguments are anonymous functions, not named
-// top-level up/down: every migration file in a domain shares one Go
-// package, so a second migration naming its functions up and down
-// would collide with the first's.
+// Register's two arguments are anonymous, not named top-level up/down: every
+// migration file in a domain shares one package, so named functions would
+// collide across files.
 const migrationSkeleton = `package migrations
 
 import (

@@ -9,16 +9,11 @@ import (
 )
 
 // BinaryPath is where Build writes the compiled dev server binary,
-// relative to the project root. It reuses the same gitignored
-// backend/bin/ convention `make smoke` already writes its own
-// temporary binary to.
+// relative to the project root.
 const BinaryPath = "backend/bin/dev-server"
 
-// Build compiles <root>/backend into BinaryPath, streaming compiler
-// output to stderr. On failure it returns an error and leaves any
-// previously built binary untouched — it never removes or truncates
-// the output path itself, `go build -o` only overwrites it on a
-// successful compile.
+// Build compiles <root>/backend into BinaryPath, streaming compiler output
+// to stderr. On failure it leaves any previously built binary untouched.
 func Build(ctx context.Context, root string) error {
 	out := filepath.Join(root, BinaryPath)
 	if err := os.MkdirAll(filepath.Dir(out), 0o755); err != nil {

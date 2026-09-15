@@ -16,10 +16,8 @@ var (
 	_ domain.TxRunner = (*TxRunner)(nil)
 )
 
-// Store is a Postgres-backed domain.Store, built over a bun.IDB so
-// the same code runs against the pooled production *bun.DB, against a
-// transaction opened by TxRunner, and against a test transaction via
-// dbtest.
+// Store is a Postgres-backed domain.Store built over a bun.IDB, so the same code
+// runs against the pooled *bun.DB, a TxRunner transaction, or a dbtest transaction.
 type Store struct {
 	users  *UserRepository
 	tokens *TokenRepository

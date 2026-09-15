@@ -15,12 +15,8 @@ import (
 	"[PROJECT-NAME]/backend/users/internal/application"
 )
 
-// checkYourEmail is the deliberately vague response returned by a
-// successful registration and by every password reset request, so the
-// reset endpoint cannot be used to learn which emails are registered.
-// Registration itself answers 409 for an address already in use — that
-// enumeration trade-off was accepted deliberately; see the users auth
-// and RBAC design.
+// checkYourEmail is the deliberately vague response for a successful registration
+// and every password reset request, so the reset endpoint cannot reveal which emails are registered.
 const checkYourEmail = "If that email needs action, we've sent a message to it."
 
 type handlers struct {
@@ -28,10 +24,8 @@ type handlers struct {
 	cookies CookieOptions
 }
 
-// RegisterUsers registers the users domain's endpoints on api, backed
-// by svc. cookies carries the session cookie policy, and logger
-// records the unexpected errors that are deliberately not returned to
-// the client.
+// RegisterUsers registers the users domain's endpoints on api, backed by svc.
+// logger records unexpected errors that are deliberately not returned to the client.
 func RegisterUsers(api huma.API, svc *application.UserService, cookies CookieOptions, logger *slog.Logger) {
 	h := &handlers{svc: svc, cookies: cookies}
 	g := httpx.NewGroup(api, "/users", "Users", logger).Errors(

@@ -13,9 +13,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-// noopResolver stands in for an identity provider on the endpoints
-// these tests exercise. /healthz declares no security requirement,
-// so the auth middleware never reaches a resolver here.
+// noopResolver stands in for an identity provider; /healthz never reaches it.
 type noopResolver struct{}
 
 func (noopResolver) Resolve(context.Context, string) (auth.Identity, error) {

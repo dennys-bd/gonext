@@ -10,9 +10,6 @@ import (
 )
 
 // CookieOptions carries the transport-level session cookie policy.
-// It lives here rather than in the domain or application layers:
-// those only ever handle a raw token string, so swapping the delivery
-// mechanism (a bearer header, a JWT for mobile) touches nothing else.
 type CookieOptions struct {
 	// Secure marks the cookie HTTPS-only. It is off only in a relaxed
 	// environment, where the server is reached over plain http and a
@@ -20,10 +17,8 @@ type CookieOptions struct {
 	Secure bool
 }
 
-// NewCookieOptions derives the cookie policy from the runtime
-// environment. It gates on application.IsRelaxedEnv — the same
-// predicate the use cases gate on — so cookie policy and use-case
-// policy cannot disagree about what counts as a local environment.
+// NewCookieOptions derives the cookie policy from env, gating on
+// application.IsRelaxedEnv so cookie and use-case policy cannot disagree.
 func NewCookieOptions(env string) CookieOptions {
 	return CookieOptions{Secure: !application.IsRelaxedEnv(env)}
 }

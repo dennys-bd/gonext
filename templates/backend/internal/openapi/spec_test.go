@@ -19,9 +19,7 @@ import (
 	"[PROJECT-NAME]/backend/internal/openapi"
 )
 
-// operationIDs is every operation the document must carry; a
-// registration that silently dropped out of Initialize's provider
-// list would fail here.
+// operationIDs is every operation the document must carry.
 var operationIDs = []string{
 	"healthz", "readyz",
 	"create-stub", "get-stub",
@@ -32,8 +30,7 @@ var operationIDs = []string{
 var errOffline = errors.New("test: database touched during registration")
 
 // offlineConnector mirrors what `gonext openapi` hands Initialize: a
-// *bun.DB that refuses to connect. If registration ever queries, the
-// error names the cause instead of a connection timeout.
+// *bun.DB that refuses to connect, so a stray query fails fast and named.
 type offlineConnector struct{}
 
 func (offlineConnector) Connect(context.Context) (driver.Conn, error) { return nil, errOffline }
@@ -60,8 +57,6 @@ func render(t *testing.T) []byte {
 	return doc
 }
 
-// TestInitialize_RegistersEveryOperationWithoutInfrastructure is the
-// test that fails if a Register ever starts touching the database.
 func TestInitialize_RegistersEveryOperationWithoutInfrastructure(t *testing.T) {
 	doc := string(render(t))
 	for _, id := range operationIDs {
@@ -71,9 +66,8 @@ func TestInitialize_RegistersEveryOperationWithoutInfrastructure(t *testing.T) {
 	}
 }
 
-// TestInitialize_DocumentIsDeterministic is the property the drift
-// check depends on: the same registrations yield the same bytes,
-// whatever the environment says.
+// The drift check depends on this: the same registrations yield the same
+// bytes, whatever the environment says.
 func TestInitialize_DocumentIsDeterministic(t *testing.T) {
 	first := render(t)
 

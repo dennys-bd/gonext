@@ -7,10 +7,8 @@ import (
 	"github.com/uptrace/bun"
 )
 
-// HealthzRegistered is a marker type with no fields: its only purpose
-// is to give wire something to depend on, so it sequences
-// RegisterHealthz's side-effecting call into the generated injector
-// instead of main.go calling it by hand.
+// HealthzRegistered is a marker wire depends on to sequence RegisterHealthz's
+// side-effecting call into the generated injector.
 type HealthzRegistered struct{}
 
 // ProvideHealthzRegistration registers /healthz and returns a marker
@@ -20,16 +18,13 @@ func ProvideHealthzRegistration(api huma.API, logger *slog.Logger) HealthzRegist
 	return HealthzRegistered{}
 }
 
-// ReadyzRegistered is a marker type with no fields: its only purpose
-// is to give wire something to depend on, so it sequences
-// RegisterReadyz's side-effecting call into the generated injector
-// instead of main.go calling it by hand.
+// ReadyzRegistered is a marker wire depends on to sequence RegisterReadyz's
+// side-effecting call into the generated injector.
 type ReadyzRegistered struct{}
 
-// ProvideReadyzRegistration registers /readyz and returns a marker
-// wire can depend on to guarantee the registration ran. It takes the
-// concrete *bun.DB (rather than the unexported pinger interface) so
-// wire.go, in package main, can wire it up.
+// ProvideReadyzRegistration registers /readyz and returns a marker wire can
+// depend on. It takes the concrete *bun.DB, not the unexported pinger
+// interface, so wire.go in package main can wire it up.
 func ProvideReadyzRegistration(api huma.API, db *bun.DB, logger *slog.Logger) ReadyzRegistered {
 	RegisterReadyz(api, db, logger)
 	return ReadyzRegistered{}

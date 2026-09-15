@@ -116,13 +116,8 @@ func TestCopy_WritesWritableFiles(t *testing.T) {
 }
 
 func TestCopy_SkipsGoModAndGoSum(t *testing.T) {
-	// A real "go.mod" file can't live inside an embed.FS fixture here:
-	// go:embed treats any directory containing one as a separate
-	// module and either refuses to embed it (at the pattern root) or
-	// silently drops it (in a subdirectory) - the same module-boundary
-	// behavior that ruled out a nested go.mod under templates/backend
-	// in the CLI itself. os.DirFS has no such restriction, so it's
-	// used here instead to exercise the skip behavior directly.
+	// go:embed treats a directory containing go.mod as a separate module and
+	// won't embed it, so os.DirFS is used here instead.
 	src := t.TempDir()
 	if err := os.WriteFile(filepath.Join(src, "go.mod"), []byte("module should-not-be-copied\n"), 0o644); err != nil {
 		t.Fatalf("setup: %v", err)
@@ -301,10 +296,8 @@ func TestAddAgents_ForceOverwrites(t *testing.T) {
 	}
 }
 
-// TestAddAgents_RefusesSymlinks pins that a symlink anywhere on an
-// owned path — a dangling leaf or a whole owned directory — is never
-// written through, even with force: it would pass a Stat-based
-// existence check and land the file wherever it points.
+// TestAddAgents_RefusesSymlinks pins that a symlink anywhere on an owned
+// path is never written through, even with force.
 func TestAddAgents_RefusesSymlinks(t *testing.T) {
 	tests := []struct {
 		name   string

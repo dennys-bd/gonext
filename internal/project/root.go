@@ -1,8 +1,5 @@
-// Package project locates a generated project from the current
-// directory and materializes the temporary runner files that
-// CLI-native subcommands (gonext migrate, gonext openapi) `go run`
-// inside it — so those capabilities live in this repo instead of
-// being vendored into every scaffolded project.
+// Package project locates a generated project's root and materializes the
+// temporary runner files CLI-native subcommands `go run` inside it.
 package project
 
 import (
@@ -15,12 +12,9 @@ import (
 
 const goModFilename = "go.mod"
 
-// Root checks that dir is a generated project's root — the directory
-// holding its go.mod, where `gonext init` ran `go mod init` — and
-// returns it as an absolute path. Subcommands are meant to be run
-// from the root (the generated Makefile does), so a go.mod is
-// required right there rather than searched for in parent
-// directories.
+// Root checks that dir holds a go.mod and returns it as an absolute path. It
+// does not search parent directories: subcommands must be run from the
+// project root.
 func Root(dir string) (string, error) {
 	abs, err := filepath.Abs(dir)
 	if err != nil {

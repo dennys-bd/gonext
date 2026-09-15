@@ -41,13 +41,9 @@ func NewHumaAPI(e *echo.Echo, resolver auth.Resolver, cfg AuthConfig, logger *sl
 	return api
 }
 
-// NewServer builds the shared Echo router wrapped in a Huma API.
-// Domains call httpx.Register against the returned huma.API; main.go
-// owns starting the returned *echo.Echo.
-//
-// NewEcho and NewHumaAPI stay split so wire can treat them as two
-// providers; NewServer is the convenience entry point for callers
-// (e.g. tests) that want both at once.
+// NewServer builds the shared Echo router wrapped in a Huma API. Domains
+// call httpx.Register against the returned huma.API; main.go owns starting
+// the returned *echo.Echo.
 func NewServer(logger *slog.Logger, resolver auth.Resolver, cfg AuthConfig) (*echo.Echo, huma.API) {
 	e := NewEcho(logger)
 	return e, NewHumaAPI(e, resolver, cfg, logger)

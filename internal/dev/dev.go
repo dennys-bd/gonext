@@ -15,11 +15,9 @@ import (
 // watcher; per the design's non-goals this is not configurable.
 const debounceWindow = 200 * time.Millisecond
 
-// runLoop wires the watcher's debounced trigger to a rebuild+restart
-// step. rebuild/restart/stop are injected so the loop's properties —
-// a failed rebuild never touches the running process, a successful
-// one restarts it, cancellation stops it — are testable without the
-// real embedded template or a `go build` toolchain invocation.
+// runLoop wires the watcher's debounced trigger to a rebuild+restart step.
+// rebuild/restart/stop are injected so it's testable without a real
+// embedded template or `go build` invocation.
 type runLoop struct {
 	rebuild func(ctx context.Context) error
 	restart func() error

@@ -1,7 +1,6 @@
-// Package auth adapts the users track's session issuer to gonext's
-// published auth.Resolver contract. It is the default identity
-// provider; swapping to a third party means providing a different
-// auth.Resolver in wire.go and deleting nothing else.
+// Package auth adapts the users track's session issuer to gonext's published
+// auth.Resolver contract — the default identity provider, swapped by providing
+// a different auth.Resolver in wire.go.
 package auth
 
 import (
@@ -24,14 +23,9 @@ func NewResolver(issuer domain.SessionIssuer) gonextauth.Resolver {
 	return resolver{issuer: issuer}
 }
 
-// Resolve validates token, discarding the User the session lookup
-// also returns — the middleware carries only an Identity, so an
-// endpoint needing the account fetches it explicitly.
-//
-// The error translation is the point of this adapter: an invalid
-// session becomes ErrUnauthenticated, and anything else is passed
-// through so the middleware can tell an expired session from a
-// database that is down.
+// Resolve validates token and translates an invalid session to
+// gonextauth.ErrUnauthenticated; any other error passes through so the
+// middleware can tell an expired session from a database that is down.
 func (r resolver) Resolve(ctx context.Context, token string) (gonextauth.Identity, error) {
 	identity, _, err := r.issuer.Validate(ctx, token)
 	if err != nil {
