@@ -13,7 +13,9 @@ import (
 
 const generateMigrationUsage = "usage: gonext generate migration <domain> <name>"
 
-const generateUsage = "usage: gonext generate [--check]\n       gonext generate migration <domain> <name>"
+const generatePageUsage = "usage: gonext generate page <route> <operationId>"
+
+const generateUsage = "usage: gonext generate [--check]\n       gonext generate migration <domain> <name>\n       gonext generate page <route> <operationId>"
 
 // generateMode is parseGenerateArgs' verdict on `gonext generate`'s
 // arguments.
@@ -23,6 +25,7 @@ const (
 	generateRun generateMode = iota
 	generateCheck
 	generateMigration
+	generatePage
 )
 
 // runGenerate implements `gonext generate [--check]` and
@@ -36,6 +39,9 @@ func runGenerate(args []string) int {
 	}
 	if mode == generateMigration {
 		return runGenerateMigration(args[1:])
+	}
+	if mode == generatePage {
+		return runGeneratePage(args[1:])
 	}
 
 	cwd, err := os.Getwd()
@@ -63,10 +69,14 @@ func runGenerate(args []string) int {
 }
 
 // parseGenerateArgs classifies `gonext generate`'s arguments: no arguments,
-// `--check`, a leading `migration`, or anything else (a usage error).
+// `--check`, a leading `migration` or `page`, or anything else (a usage
+// error).
 func parseGenerateArgs(args []string) (generateMode, error) {
 	if len(args) > 0 && args[0] == "migration" {
 		return generateMigration, nil
+	}
+	if len(args) > 0 && args[0] == "page" {
+		return generatePage, nil
 	}
 	if len(args) == 0 {
 		return generateRun, nil
@@ -80,7 +90,7 @@ func parseGenerateArgs(args []string) (generateMode, error) {
 // runGenerateMigration implements `gonext generate migration
 // <domain> <name>` for the generated project in the current directory.
 func runGenerateMigration(args []string) int {
-	domain, name, err := parseGenerateMigrationArgs(args)
+	domain, name, err := parseTwoPositionals(args, generateMigrationUsage)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)
 		return 1
@@ -107,9 +117,41 @@ func runGenerateMigration(args []string) int {
 	return 0
 }
 
-// parseGenerateMigrationArgs requires exactly two positionals; any
+// runGeneratePage implements `gonext generate page <route>
+// <operationId>` for the generated project in the current directory.
+func runGeneratePage(args []string) int {
+	route, opID, err := parseTwoPositionals(args, generatePageUsage)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "error:", err)
+		return 1
+	}
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "error:", err)
+		return 1
+	}
+	root, err := project.Root(cwd)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "error:", err)
+		return 1
+	}
+
+	paths, err := generate.Page(root, route, opID)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "error:", err)
+		return 1
+	}
+
+	for _, p := range paths {
+		fmt.Println("created", p)
+	}
+	return 0
+}
+
+// parseTwoPositionals requires exactly two positional arguments; any
 // `--`-prefixed argument is unknown.
-func parseGenerateMigrationArgs(args []string) (domain, name string, err error) {
+func parseTwoPositionals(args []string, usage string) (a, b string, err error) {
 	var positional []string
 	for _, arg := range args {
 		if strings.HasPrefix(arg, "--") {
@@ -118,7 +160,7 @@ func parseGenerateMigrationArgs(args []string) (domain, name string, err error) 
 		positional = append(positional, arg)
 	}
 	if len(positional) != 2 {
-		return "", "", errors.New(generateMigrationUsage)
+		return "", "", errors.New(usage)
 	}
 	return positional[0], positional[1], nil
 }

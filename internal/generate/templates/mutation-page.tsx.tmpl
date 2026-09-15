@@ -1,0 +1,19 @@
+import { Title } from "@mantine/core";
+import { {{.FormName}} } from "./{{.FormImport}}";
+{{if .HasUsed}}
+type Params = { {{range $i, $p := .Params}}{{if $i}}; {{end}}{{$p.Name}}: {{$p.TSType}}{{end}} };
+{{end}}
+export default {{if .HasUsed}}async {{end}}function {{.ComponentName}}({{if .HasUsed}}{
+  params,
+}: {
+  params: Promise<Params>;
+}{{end}}) {
+{{if .HasUsed}}  const { {{range $i, $p := .UsedParams}}{{if $i}}, {{end}}{{$p.Name}}{{end}} } = await params;
+
+{{end}}  return (
+    <>
+      <Title order={1}>{{.Title}}</Title>
+      <{{.FormName}}{{if .HasUsed}} path={{"{"}}{ {{range $i, $p := .UsedParams}}{{if $i}}, {{end}}{{$p.Name}}{{end}} }{{"}"}}{{end}} />
+    </>
+  );
+}

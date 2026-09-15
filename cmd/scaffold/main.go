@@ -36,6 +36,7 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "       gonext add agent <tool>... [--force]")
 	fmt.Fprintln(os.Stderr, "       gonext generate [--check]")
 	fmt.Fprintln(os.Stderr, "       gonext generate migration <domain> <name>")
+	fmt.Fprintln(os.Stderr, "       gonext generate page <route> <operationId>")
 	fmt.Fprintln(os.Stderr, "       gonext migrate [<domain>/<version>] [--yes]")
 	fmt.Fprintln(os.Stderr, "       gonext dev")
 	fmt.Fprintln(os.Stderr, "       gonext openapi [--check]")

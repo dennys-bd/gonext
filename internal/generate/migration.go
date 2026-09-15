@@ -43,8 +43,8 @@ func init() {
 }
 `
 
-const migrationFileMode = 0o644
-const migrationDirMode = 0o755
+const fileMode = 0o644
+const dirMode = 0o755
 
 // Migration writes backend/<domain>/migrations/<NNNN>_<name>.go under
 // root with the domain's next sequence number and returns its
@@ -69,13 +69,13 @@ func Migration(root, domain, name string) (string, error) {
 		return "", err
 	}
 
-	if err := os.MkdirAll(dir, migrationDirMode); err != nil {
+	if err := os.MkdirAll(dir, dirMode); err != nil {
 		return "", fmt.Errorf("creating %s: %w", dir, err)
 	}
 	filename := version + "_" + name + ".go"
 	// O_EXCL: never truncate a file that appeared between the scan
 	// and the write, or one the developer created by hand.
-	f, err := os.OpenFile(filepath.Join(dir, filename), os.O_WRONLY|os.O_CREATE|os.O_EXCL, migrationFileMode)
+	f, err := os.OpenFile(filepath.Join(dir, filename), os.O_WRONLY|os.O_CREATE|os.O_EXCL, fileMode)
 	if err != nil {
 		return "", fmt.Errorf("writing %s: %w", filename, err)
 	}

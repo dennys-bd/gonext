@@ -1,0 +1,43 @@
+import { describe, expect, it, vi } from "vitest";
+import { api } from "@/lib/api";
+import { render, screen } from "@/test-utils";
+import Page from "./page";
+
+vi.mock("@/lib/api", () => ({
+  api: { {{.Tag}}: { {{.ActionName}}: vi.fn() } },
+}));
+
+const {{.ActionName}} = vi.mocked({{.CallName}});
+{{if .HasUsed}}const params = Promise.resolve({ {{range $i, $p := .Params}}{{if $i}}, {{end}}{{$p.Name}}: {{if $p.CatchAll}}["example"]{{else}}"example"{{end}}{{end}} });
+{{end}}
+describe("{{.ComponentName}}", () => {
+  it("renders the response", async () => {
+    {{.ActionName}}.mockResolvedValue({
+      data: { {{range $i, $f := .Fields}}{{if $i}}, {{end}}{{$f.Name}}: {{$f.Sample}}{{end}} },
+      error: undefined,
+      request: new Request("http://localhost"),
+      response: new Response(),
+    });
+
+    render(await Page({{if .HasUsed}}{ params }{{end}}));
+
+    expect({{.ActionName}}).toHaveBeenCalledWith({{if .HasUsed}}{ path: { {{range $i, $p := .UsedParams}}{{if $i}}, {{end}}{{$p.Name}}: "example"{{end}} } }{{end}});
+    expect(
+      screen.getByRole("heading", { level: 1, name: "{{.Title}}" }),
+    ).toBeInTheDocument();
+{{range .Fields}}{{if .IsString}}    expect(screen.getByText({{.Sample}})).toBeInTheDocument();
+{{end}}{{end}}  });
+
+  it("shows the error detail", async () => {
+    {{.ActionName}}.mockResolvedValue({
+      data: undefined,
+      error: {{if .HasDetail}}{ detail: "rejected" }{{else}}{}{{end}},
+      request: new Request("http://localhost"),
+      response: new Response(null, { status: 400 }),
+    });
+
+    render(await Page({{if .HasUsed}}{ params }{{end}}));
+
+    expect(screen.getByRole("alert")).toHaveTextContent({{if .HasDetail}}"rejected"{{else}}"Request failed"{{end}});
+  });
+});

@@ -1,0 +1,51 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { api } from "@/lib/api";
+import { {{.ActionName}} } from "./actions";
+
+vi.mock("@/lib/api", () => ({
+  api: { {{.Tag}}: { {{.ActionName}}: vi.fn() } },
+}));
+
+const request = vi.mocked({{.CallName}});
+
+function fields(): FormData {
+  const form = new FormData();
+{{range .Inputs}}{{if not .Todo}}  form.set("{{.Name}}", "{{.Sample}}");
+{{end}}{{end}}  return form;
+}
+
+afterEach(() => {
+  vi.clearAllMocks();
+});
+
+describe("{{.ActionName}}", () => {
+  it("sends the form and returns the response", async () => {
+    request.mockResolvedValue({
+      data: {{if .HasData}}{ {{range $i, $f := .Fields}}{{if $i}}, {{end}}{{$f.Name}}: {{$f.Sample}}{{end}} }{{else}}undefined{{end}},
+      error: undefined,
+      request: new Request("http://localhost"),
+      response: new Response(),
+    });
+
+    const state = await {{.ActionName}}({{if .HasUsed}}{{.TestPathArg}}, {{end}}{}, fields());
+
+    expect(request).toHaveBeenCalledWith({{.TestCallWith}});
+    expect(state).toEqual({
+      done: true,
+{{if .HasData}}      data: { {{range $i, $f := .Fields}}{{if $i}}, {{end}}{{$f.Name}}: {{$f.Sample}}{{end}} },
+{{end}}    });
+  });
+
+  it("returns the error detail", async () => {
+    request.mockResolvedValue({
+      data: undefined,
+      error: {{if .HasDetail}}{ detail: "rejected" }{{else}}{}{{end}},
+      request: new Request("http://localhost"),
+      response: new Response(null, { status: 400 }),
+    });
+
+    const state = await {{.ActionName}}({{if .HasUsed}}{{.TestPathArg}}, {{end}}{}, fields());
+
+    expect(state).toEqual({ error: {{if .HasDetail}}"rejected"{{else}}"Request failed"{{end}} });
+  });
+});

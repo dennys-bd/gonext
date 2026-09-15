@@ -1,0 +1,37 @@
+"use client";
+
+import { {{range $i, $c := .MantineImports}}{{if $i}}, {{end}}{{$c}}{{end}} } from "@mantine/core";
+import { useActionState } from "react";
+import { {{.ActionName}} } from "./actions";
+
+export function {{.FormName}}({{if .HasUsed}}{ path }: {{"{"}} path: {{"{"}} {{range $i, $p := .UsedParams}}{{if $i}}; {{end}}{{$p.Name}}: {{$p.TSType}}{{end}} {{"}"}} {{"}"}}{{end}}) {
+  const [state, action, pending] = useActionState({{.ActionName}}{{if .HasUsed}}.bind(null, path){{end}}, {});
+
+  return (
+    <form action={action}>
+      <Stack maw={360}>
+{{range .Inputs}}{{if .Todo}}        {/* TODO: {{.Name}} is not rendered (array or object) */}
+{{else}}        <{{.Component}} name="{{.Name}}"{{if .InputType}} type="{{.InputType}}"{{end}} label="{{.Label}}"{{if .Required}} required{{end}} />
+{{end}}{{end}}        {state.error && (
+          <Text c="red" role="alert">
+            {state.error}
+          </Text>
+        )}
+{{if eq .ResponseKind "object"}}        {state.data && (
+          <dl>
+{{range .Fields}}{{if .Todo}}            {/* TODO: {{.Name}} is not a primitive; render it manually */}
+{{else}}            <dt>{{.Name}}</dt>
+            <dd>{{if .IsBoolean}}{String(state.data.{{.Name}})}{{else}}{state.data.{{.Name}}}{{end}}</dd>
+{{end}}{{end}}          </dl>
+        )}
+{{else if eq .ResponseKind "value"}}        {state.data !== undefined && (
+          <pre>{JSON.stringify(state.data, null, 2)}</pre>
+        )}
+{{else}}        {state.done && <Text>Done</Text>}
+{{end}}        <Button type="submit" loading={pending}>
+          {{.Title}}
+        </Button>
+      </Stack>
+    </form>
+  );
+}
