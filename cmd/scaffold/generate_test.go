@@ -12,6 +12,7 @@ func TestParseGenerateArgs(t *testing.T) {
 		{name: "no args", args: nil, want: generateRun},
 		{name: "check", args: []string{"--check"}, want: generateCheck},
 		{name: "migration", args: []string{"migration", "a", "b"}, want: generateMigration},
+		{name: "page", args: []string{"page", "stubs/[id]", "get-stub"}, want: generatePage},
 		{name: "unknown flag", args: []string{"--bogus"}, wantErr: true},
 		{name: "unknown positional", args: []string{"wire"}, wantErr: true},
 	}
@@ -35,38 +36,42 @@ func TestParseGenerateArgs(t *testing.T) {
 	}
 }
 
-func TestParseGenerateMigrationArgs(t *testing.T) {
+func TestParseTwoPositionals(t *testing.T) {
 	tests := []struct {
-		name       string
-		args       []string
-		wantDomain string
-		wantName   string
-		wantErr    bool
+		name    string
+		usage   string
+		args    []string
+		wantA   string
+		wantB   string
+		wantErr bool
 	}{
-		{name: "domain and name", args: []string{"users", "create_users"}, wantDomain: "users", wantName: "create_users"},
-		{name: "missing name", args: []string{"users"}, wantErr: true},
-		{name: "no args", args: []string{}, wantErr: true},
-		{name: "extra positional", args: []string{"users", "x", "y"}, wantErr: true},
-		{name: "unknown flag", args: []string{"users", "x", "--after=users/0001"}, wantErr: true},
+		{name: "migration: domain and name", usage: generateMigrationUsage, args: []string{"users", "create_users"}, wantA: "users", wantB: "create_users"},
+		{name: "migration: missing name", usage: generateMigrationUsage, args: []string{"users"}, wantErr: true},
+		{name: "migration: no args", usage: generateMigrationUsage, args: []string{}, wantErr: true},
+		{name: "migration: extra positional", usage: generateMigrationUsage, args: []string{"users", "x", "y"}, wantErr: true},
+		{name: "migration: unknown flag", usage: generateMigrationUsage, args: []string{"users", "x", "--after=users/0001"}, wantErr: true},
+		{name: "page: route and operationId", usage: generatePageUsage, args: []string{"stubs/[id]", "get-stub"}, wantA: "stubs/[id]", wantB: "get-stub"},
+		{name: "page: missing operationId", usage: generatePageUsage, args: []string{"stubs/[id]"}, wantErr: true},
+		{name: "page: --force rejected", usage: generatePageUsage, args: []string{"stubs/[id]", "get-stub", "--force"}, wantErr: true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			domain, name, err := parseGenerateMigrationArgs(tt.args)
+			a, b, err := parseTwoPositionals(tt.args, tt.usage)
 			if tt.wantErr {
 				if err == nil {
-					t.Fatalf("parseGenerateMigrationArgs(%v): expected error, got nil", tt.args)
+					t.Fatalf("parseTwoPositionals(%v): expected error, got nil", tt.args)
 				}
 				return
 			}
 			if err != nil {
-				t.Fatalf("parseGenerateMigrationArgs(%v): unexpected error: %v", tt.args, err)
+				t.Fatalf("parseTwoPositionals(%v): unexpected error: %v", tt.args, err)
 			}
-			if domain != tt.wantDomain {
-				t.Errorf("domain = %q, want %q", domain, tt.wantDomain)
+			if a != tt.wantA {
+				t.Errorf("a = %q, want %q", a, tt.wantA)
 			}
-			if name != tt.wantName {
-				t.Errorf("name = %q, want %q", name, tt.wantName)
+			if b != tt.wantB {
+				t.Errorf("b = %q, want %q", b, tt.wantB)
 			}
 		})
 	}

@@ -52,4 +52,23 @@ func TestInit_E2E(t *testing.T) {
 	if out, err := pnpmCmd.CombinedOutput(); err != nil {
 		t.Errorf("pnpm install --frozen-lockfile failed in generated project: %v\n%s", err, out)
 	}
+
+	// The only place the generated TSX is actually compiled, linted and
+	// run: gonext generate page against the real scaffolded contract,
+	// then pnpm typecheck/lint/test in frontend/.
+	t.Chdir(dest)
+	if code := runGeneratePage([]string{"stubs/[id]", "get-stub"}); code != 0 {
+		t.Fatalf("runGeneratePage(stubs/[id] get-stub): expected exit code 0, got %d", code)
+	}
+	if code := runGeneratePage([]string{"stubs/new", "create-stub"}); code != 0 {
+		t.Fatalf("runGeneratePage(stubs/new create-stub): expected exit code 0, got %d", code)
+	}
+
+	for _, script := range []string{"typecheck", "lint", "test"} {
+		cmd := exec.Command("pnpm", script)
+		cmd.Dir = filepath.Join(dest, "frontend")
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Errorf("pnpm %s failed against the generated page: %v\n%s", script, err, out)
+		}
+	}
 }

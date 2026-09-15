@@ -9,6 +9,7 @@ require (
 	github.com/mattn/go-isatty v0.0.24
 	github.com/uptrace/bun v1.2.18
 	github.com/uptrace/bun/dialect/pgdialect v1.2.18
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (

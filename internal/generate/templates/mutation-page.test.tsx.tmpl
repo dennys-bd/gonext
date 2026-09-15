@@ -1,0 +1,23 @@
+import { describe, expect, it, vi } from "vitest";
+import { render, screen } from "@/test-utils";
+import Page from "./page";
+
+vi.mock("@/lib/api", () => ({
+  api: { {{.Tag}}: { {{.ActionName}}: vi.fn() } },
+}));
+{{if .HasUsed}}
+const params = Promise.resolve({ {{range $i, $p := .Params}}{{if $i}}, {{end}}{{$p.Name}}: {{if $p.CatchAll}}["example"]{{else}}"example"{{end}}{{end}} });
+{{end}}
+describe("{{.ComponentName}}", () => {
+  it("renders the form", {{if .HasUsed}}async {{end}}() => {
+    render({{if .HasUsed}}await Page({ params }){{else}}Page(){{end}});
+
+    expect(
+      screen.getByRole("heading", { level: 1, name: "{{.Title}}" }),
+    ).toBeInTheDocument();
+{{range .Inputs}}{{if not .Todo}}    expect(screen.getByLabelText("{{.Label}}", { exact: false })).toBeInTheDocument();
+{{end}}{{end}}    expect(
+      screen.getByRole("button", { name: "{{.Title}}" }),
+    ).toBeInTheDocument();
+  });
+});

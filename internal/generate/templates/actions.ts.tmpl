@@ -1,0 +1,25 @@
+"use server";
+
+import { api } from "@/lib/api";
+{{if .HasData}}
+type Data = Awaited<ReturnType<typeof {{.CallName}}>>["data"];
+{{end}}
+export type {{.StateName}} = { done?: true;{{if .HasData}} data?: Data;{{end}} error?: string };
+
+export async function {{.ActionName}}(
+{{if .HasUsed}}  path: {{"{"}} {{range $i, $p := .UsedParams}}{{if $i}}; {{end}}{{$p.Name}}: {{$p.TSType}}{{end}} {{"}"}},
+{{end}}  _prev: {{.StateName}},
+  {{if .HasBody}}formData{{else}}_formData{{end}}: FormData,
+): Promise<{{.StateName}}> {
+{{if .HasUsed}}  const { {{range $i, $p := .UsedParams}}{{if $i}}, {{end}}{{$p.Name}}{{end}} } = path;
+{{end}}  const { {{if .HasData}}data, {{end}}error } = await {{.CallName}}({{if or .HasUsed .HasBody}}{
+{{if .HasUsed}}    path: { {{range $i, $p := .UsedParams}}{{if $i}}, {{end}}{{if $p.CatchAll}}{{$p.Name}}: {{$p.PathExpr}}{{else}}{{$p.Name}}{{end}}{{end}} },
+{{end}}{{if .HasBody}}    body: {
+{{range .Inputs}}      {{.Name}}: {{.Coercion}},
+{{end}}    },
+{{end}}  }{{end}});
+  if (error) {
+    return { error: {{if .HasDetail}}error.detail ?? "Request failed"{{else}}"Request failed"{{end}} };
+  }
+  return { done: true{{if .HasData}}, data{{end}} };
+}
