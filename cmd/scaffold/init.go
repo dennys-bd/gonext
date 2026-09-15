@@ -186,10 +186,12 @@ func bootstrapDatabase(ctx context.Context, dest string) error {
 	return nil
 }
 
-// pinGonextModule records the exact gonext version this CLI was built
-// against, before `go mod tidy` gets a chance to resolve something
-// newer.
+// pinGonextModule ties the project to the gonext this CLI was built from
+// before `go mod tidy` gets a chance to resolve something newer.
 func pinGonextModule(dest string) error {
-	require := scaffold.ModulePath + "@" + scaffold.ModuleVersion
-	return xexec.Run(context.Background(), dest, "go", "mod", "edit", "-require="+require)
+	editArgs, err := scaffold.ModuleEdit(dest)
+	if err != nil {
+		return err
+	}
+	return xexec.Run(context.Background(), dest, "go", append([]string{"mod", "edit"}, editArgs...)...)
 }

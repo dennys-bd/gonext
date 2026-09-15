@@ -1,10 +1,13 @@
 package main
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
+
+	"github.com/dennys-bd/gonext/internal/migrate"
 )
 
 // TestInit_E2E runs a real `gonext init` into a temp directory and asserts
@@ -26,6 +29,13 @@ func TestInit_E2E(t *testing.T) {
 	buildCmd.Dir = dest
 	if out, err := buildCmd.CombinedOutput(); err != nil {
 		t.Errorf("go build ./... failed in generated project: %v\n%s", err, out)
+	}
+
+	// The only place the migration runner template gets compiled against
+	// the pinned gonext library — `gonext migrate` itself never runs here
+	// since there's no database, but `go vet` proves it still compiles.
+	if err := migrate.Vet(context.Background(), dest); err != nil {
+		t.Errorf("migrate.Vet failed in generated project: %v", err)
 	}
 
 	// Proves the `go get -tool` step landed the tool directive and
