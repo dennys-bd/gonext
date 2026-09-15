@@ -35,10 +35,7 @@ func RequirePermission(key string) []map[string][]string {
 }
 
 // Optional declares that an identity should be resolved when a
-// credential is present, and that its absence is not an error. The
-// empty first alternative is OpenAPI's own way of saying "no
-// credential is also acceptable", so the published document stays
-// standards-correct rather than carrying an invented marker.
+// credential is present, and that its absence is not an error.
 func Optional() []map[string][]string {
 	return []map[string][]string{{}, {SchemeName: {}}}
 }
@@ -46,8 +43,7 @@ func Optional() []map[string][]string {
 // Rule is one operation's decoded requirement.
 type Rule struct {
 	// Enabled reports whether the operation participates in
-	// authentication at all. When false the middleware never reads a
-	// credential, so an undeclared operation costs no lookup.
+	// authentication; false means no credential is ever read.
 	Enabled bool
 	// Optional reports that a missing or invalid credential must not
 	// be rejected.
@@ -58,10 +54,8 @@ type Rule struct {
 }
 
 // RuleFor decodes an operation's OpenAPI security requirements.
-//
-// Each helper above produces exactly one rule; composing two helpers
-// on one operation is not supported, and RuleFor simply flattens
-// whatever non-empty alternatives it finds.
+// Composing two of the helpers above on one operation is not
+// supported; RuleFor flattens whatever alternatives it finds.
 func RuleFor(security []map[string][]string) Rule {
 	if len(security) == 0 {
 		return Rule{}

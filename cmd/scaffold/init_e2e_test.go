@@ -7,12 +7,9 @@ import (
 	"testing"
 )
 
-// TestInit_E2E runs a real `gonext init` into a temp directory and
-// asserts the generated project builds and installs its frontend
-// dependencies. It hits the network and can take a while, so it is
-// opt-in only: run with GONEXT_E2E=1, as its own CI job, mirroring
-// the templates' own `make smoke` (slow, Docker-backed) split from
-// `make test` (fast).
+// TestInit_E2E runs a real `gonext init` into a temp directory and asserts
+// the generated project builds and installs its frontend dependencies. It
+// hits the network, so it's opt-in only: run with GONEXT_E2E=1.
 func TestInit_E2E(t *testing.T) {
 	if os.Getenv("GONEXT_E2E") == "" {
 		t.Skip("set GONEXT_E2E=1 to run the opt-in end-to-end scaffolding test")

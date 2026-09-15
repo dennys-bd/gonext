@@ -24,11 +24,9 @@ func ParseTarget(s string) (Target, error) {
 	return Target{Domain: domain, Version: version}, nil
 }
 
-// Plan computes what bringing the registry's applied set (given by
-// the names already applied) to target requires: rollback lists the
-// applied migrations to unapply in reverse dependency order, apply
-// lists the pending ones to apply in dependency order. Both are empty
-// and err is nil when target is already met.
+// Plan computes what bringing applied to target requires: rollback
+// to unapply (reverse dependency order) and apply to run (dependency
+// order). Both empty means target is already met.
 func (r *Registry) Plan(target Target, applied map[string]bool) (rollback, apply []Migration, err error) {
 	g, err := r.buildGraph()
 	if err != nil {
@@ -60,12 +58,7 @@ func (r *Registry) Plan(target Target, applied map[string]bool) (rollback, apply
 }
 
 // planRollback finds every applied migration that must be unapplied
-// to bring target.Domain down to target.Version: every applied
-// version of that domain past target.Version, plus, transitively,
-// every applied migration that depends on one of those. It returns
-// them ordered so a dependent is always unapplied before what it
-// depends on — a topological order of the reversed dependency graph,
-// restricted to that set.
+// to reach target, dependents ordered before their dependencies.
 func (r *Registry) planRollback(g *graph, domainKeys []string, target Target, applied map[string]bool) ([]Migration, error) {
 	set := make(map[string]bool)
 	var queue []string
@@ -93,11 +86,8 @@ func (r *Registry) planRollback(g *graph, domainKeys []string, target Target, ap
 		return nil, nil
 	}
 
-	// Kahn's algorithm again, but over the set's edges reversed: a
-	// migration is safe to unapply once nothing left in the set still
-	// depends on it (indegree here counts dependents, not
-	// dependencies), and unapplying it then frees up its own
-	// dependencies the same way.
+	// Kahn's algorithm again, but reversed: indegree counts dependents
+	// here, so a migration is ready once nothing left still depends on it.
 	indegree := make(map[string]int, len(set))
 	reverseDeps := make(map[string][]string, len(set))
 	for key := range set {
@@ -127,10 +117,8 @@ func (r *Registry) planRollback(g *graph, domainKeys []string, target Target, ap
 	return migrations, nil
 }
 
-// planApply finds targetKey (empty for a "zero" target, meaning
-// nothing to apply) plus everything it transitively depends on,
-// drops what's already applied, and orders what's left the same way
-// Order does.
+// planApply finds targetKey plus everything it transitively depends
+// on, drops what's already applied, and orders the rest.
 func (r *Registry) planApply(g *graph, targetKey string, applied map[string]bool) ([]Migration, error) {
 	if targetKey == "" {
 		return nil, nil
@@ -172,22 +160,16 @@ var ErrNotConfirmed = errors.New("rollback not confirmed")
 // describes what would run; rerun to plan against the new state.
 var ErrStateChanged = errors.New("migration state changed since planning; rerun")
 
-// Migrate brings target's domain to target.Version. confirm is called
-// with the rollback list when it is non-empty and must return true to
-// proceed; a nil confirm proceeds. Rollbacks run before applies. It
-// returns what was rolled back and what was applied, stopping at the
-// first failure with everything before it already marked/unmarked.
+// Migrate brings target's domain to target.Version, rolling back
+// before applying; confirm is asked before a non-empty rollback and
+// must return true to proceed. It stops at the first failure.
 func Migrate(ctx context.Context, db *bun.DB, target Target, confirm func(rollback []Migration) bool) ([]Migration, []Migration, error) {
 	return defaultRegistry.Migrate(ctx, db, target, confirm)
 }
 
 // Migrate is the Registry-scoped form of the package-level Migrate;
-// see its doc comment. The plan is read once, unlocked, so confirm
-// can be asked before anything is locked; once confirmed (or when
-// there is nothing to confirm), it locks and re-plans from a fresh
-// read. If a concurrent run changed the applied set in between, the
-// fresh plan differs from the one the developer saw and Migrate
-// stops with ErrStateChanged rather than execute unconfirmed steps.
+// see its doc comment. It re-plans after locking and returns
+// ErrStateChanged if a concurrent run changed the applied set.
 func (r *Registry) Migrate(ctx context.Context, db *bun.DB, target Target, confirm func(rollback []Migration) bool) (rolledBack, applied []Migration, err error) {
 	migrator, _, err := r.newMigrator(db)
 	if err != nil {
@@ -231,9 +213,8 @@ func (r *Registry) Migrate(ctx context.Context, db *bun.DB, target Target, confi
 	}
 
 	for _, m := range rollbackPlan {
-		// rows comes from the same read the plan was checked against,
-		// so every rollback entry has one; a miss is a bug, and in a
-		// destructive loop it must stop rather than skip.
+		// rows comes from the same read the plan was checked against; a
+		// miss here is a bug, and a destructive loop must stop, not skip.
 		row, ok := rows[m.String()]
 		if !ok {
 			return rolledBack, applied, fmt.Errorf("internal error: %s planned for rollback but not among applied rows", m)

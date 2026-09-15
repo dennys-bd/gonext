@@ -7,28 +7,19 @@ import (
 	xexec "github.com/dennys-bd/gonext/internal/exec"
 )
 
-// Generator is one codegen step `gonext generate` runs from the
-// project root. Run regenerates the step's output; Check exits
-// non-zero when the output is stale, and may be nil, in which case
-// `--check` skips the step.
+// Generator is one codegen step `gonext generate` runs from the project
+// root. Check may be nil, in which case `--check` skips the step.
 type Generator struct {
 	Name       string
 	Run, Check []string
 
-	// stale, when set, is the error runGenerators returns for this
-	// step's Check failure instead of the generic "<name>: <err>"
-	// wrapping. It exists only so wire's stale check can name the
-	// file a developer needs to look at, without widening the
-	// exported shape for a step that will otherwise carry only a
-	// name and two argv slices.
+	// stale, when set, is a more specific error than "<name>: <err>" for
+	// this step's Check failure.
 	stale string
 }
 
-// Generators returns the project's codegen steps in execution order.
-// Always just wire today; root is accepted unused so that #72's
-// config file can later read the step list from it (dropping wire
-// for a project on Uber's runtime DI, appending developer-declared
-// steps) without changing any caller.
+// Generators returns the project's codegen steps in execution order. root is
+// accepted unused for a future config file to read the step list from.
 func Generators(root string) []Generator {
 	return []Generator{
 		{

@@ -1,12 +1,6 @@
-// Package httpx wraps Huma's registration so handlers receive a
-// request context of this project's own type instead of a bare
-// context.Context.
-//
-// huma.Register pins its handler's first parameter to
-// context.Context, so a custom type cannot be substituted directly —
-// Register below is the thin generic adapter that makes it possible.
-// Use it for every endpoint; a golangci-lint rule forbids calling
-// huma.Register outside this package.
+// Package httpx wraps Huma's registration so handlers receive a *Ctx instead
+// of a bare context.Context. Register is the adapter; a lint rule forbids
+// calling huma.Register directly outside this package.
 package httpx
 
 import (
@@ -34,13 +28,9 @@ func NewCtx(ctx context.Context) *Ctx {
 	return &Ctx{Context: ctx, identity: identity, hasIdentity: ok}
 }
 
-// Identity returns the authenticated identity.
-//
-// It panics when there is none, which is only reachable from an
-// operation that declared auth.Optional() (or declared nothing) — see
-// IdentityOK for those. On an operation declaring auth.Required(),
-// auth.RequireRole or auth.RequirePermission the middleware has
-// already rejected the request, so an identity is guaranteed.
+// Identity returns the authenticated identity. It panics unless the
+// operation declared auth.Required(), RequireRole or RequirePermission;
+// use IdentityOK when auth is optional or undeclared.
 func (c *Ctx) Identity() auth.Identity {
 	if !c.hasIdentity {
 		panic("httpx: no identity in context; declare auth.Required() on the operation, or use IdentityOK")

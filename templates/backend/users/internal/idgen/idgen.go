@@ -1,7 +1,6 @@
-// Package idgen mints the users domain's random identifiers: user
-// ids, one-shot token values, and session tokens. It lives in its own
-// package because application and infrastructure are siblings that
-// must not import each other, yet both need the same generator.
+// Package idgen mints the users domain's random identifiers: user ids,
+// one-shot token values, and session tokens. It exists separately so both
+// application and infrastructure, which must not import each other, can share it.
 package idgen
 
 import (
@@ -10,9 +9,8 @@ import (
 	"fmt"
 )
 
-// entropyBytes is the width of every generated id. 256 bits is far
-// past guessing range, which is what lets session tokens be hashed
-// with a fast digest instead of a password-grade one.
+// entropyBytes is the width of every generated id — 256 bits, far past guessing
+// range, is what lets session tokens use a fast hash instead of a password-grade one.
 const entropyBytes = 32
 
 // New returns a random 256-bit hex id. The error is surfaced rather

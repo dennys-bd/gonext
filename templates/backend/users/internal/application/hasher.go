@@ -12,9 +12,7 @@ import (
 	"[PROJECT-NAME]/backend/users/domain"
 )
 
-// Argon2id cost parameters. Deliberately constants rather than
-// environment settings: they are a security property of Core, not
-// something a project should tune per deployment.
+// Argon2id cost parameters, deliberately fixed rather than a per-deployment setting.
 const (
 	argonTime    uint32 = 1
 	argonMemory  uint32 = 64 * 1024
@@ -25,10 +23,8 @@ const (
 
 var _ domain.PasswordHasher = (*Argon2Hasher)(nil)
 
-// Argon2Hasher hashes passwords with Argon2id, encoding the salt and
-// cost parameters alongside the digest in the standard PHC string
-// format so a future parameter change stays backwards compatible with
-// already-stored hashes.
+// Argon2Hasher hashes passwords with Argon2id, encoding params in the PHC
+// string format so a future parameter change stays compatible with existing hashes.
 type Argon2Hasher struct{}
 
 // NewArgon2Hasher constructs an Argon2Hasher.

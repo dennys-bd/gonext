@@ -1,9 +1,7 @@
 package presentation
 
-// The request and response shapes for the users track's HTTP
-// operations. They live beside users.go rather than in it so the route
-// surface and its handlers read without scrolling past seventy lines of
-// struct tags.
+// The request and response shapes for the users track's HTTP operations, kept
+// separate from users.go to avoid burying the route surface in struct tags.
 
 import "net/http"
 

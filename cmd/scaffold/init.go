@@ -107,12 +107,7 @@ func runInit(args []string) int {
 }
 
 // parseInitArgs splits args into the positional name/path and the
-// --agents=<list> flag, which may appear anywhere among them. A
-// stdlib flag.FlagSet was rejected because it stops parsing at the
-// first positional argument, which would silently ignore
-// `gonext init my-app --agents=claude`. Any other `--`-prefixed
-// argument is a usage error; extra positionals beyond name and path
-// are ignored, matching prior behaviour.
+// --agents=<list> flag, which may appear anywhere among them.
 func parseInitArgs(args []string) (name, path, agents string, agentsSet bool, err error) {
 	var positionals []string
 	for _, arg := range args {
@@ -163,10 +158,9 @@ func copyEnvFile(dest string) error {
 	return os.WriteFile(filepath.Join(dest, ".env"), data, 0o644)
 }
 
-// bootstrapDatabase brings up Postgres via Docker Compose and runs
-// the generated project's own migrate binary. Any failure here is
-// best-effort and reported to the caller as a warning, not a fatal
-// error.
+// bootstrapDatabase brings up Postgres via Docker Compose and runs the
+// generated project's own migrations. Any failure is best-effort, reported
+// to the caller as a warning, not fatal.
 func bootstrapDatabase(ctx context.Context, dest string) error {
 	if err := xexec.Run(ctx, dest, "docker", "compose", "up", "-d", "db"); err != nil {
 		return fmt.Errorf("docker compose up: %w", err)

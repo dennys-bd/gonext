@@ -6,10 +6,7 @@ import (
 	"golden-app/backend/users/internal/application"
 )
 
-// One predicate decides every environment-gated behaviour in this
-// domain — token exposure, the unconfirmed-login gate, and (via the
-// presentation layer) the cookie's Secure flag. stg sits on the
-// restricted side with prod.
+// stg sits on the restricted side with prod, not the relaxed side with dev/test.
 func TestIsRelaxedEnv(t *testing.T) {
 	tests := []struct {
 		env  string

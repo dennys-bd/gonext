@@ -73,10 +73,9 @@ func (d *Debouncer) Stop() {
 	}
 }
 
-// Watch recursively watches backendRoot for .go file changes
-// (excluding backend/bin/), debouncing bursts within window into a
-// single call to onChange. It returns a stop function that shuts the
-// watcher down; onChange is never called after stop returns.
+// Watch recursively watches backendRoot for .go file changes (excluding
+// backend/bin/), debouncing bursts within window into a single call to
+// onChange. onChange is never called after the returned stop func runs.
 func Watch(backendRoot string, window time.Duration, onChange func()) (stop func(), err error) {
 	w, err := fsnotify.NewWatcher()
 	if err != nil {

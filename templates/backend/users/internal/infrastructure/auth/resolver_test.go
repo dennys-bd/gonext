@@ -56,10 +56,8 @@ func TestResolver_InvalidSessionBecomesErrUnauthenticated(t *testing.T) {
 	}
 }
 
-// An infrastructure failure must NOT be translated: the middleware
-// distinguishes the two to decide between 401 and 500, and mapping
-// everything to ErrUnauthenticated would present an outage as a
-// mass logout.
+// An infrastructure failure must not be translated to ErrUnauthenticated —
+// that would present an outage as a mass logout instead of a 500.
 func TestResolver_InfrastructureErrorIsNotTranslated(t *testing.T) {
 	resolver := authadapter.NewResolver(stubIssuer{err: errDatabaseDown})
 

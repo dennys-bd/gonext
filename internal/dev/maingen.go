@@ -18,9 +18,8 @@ const (
 )
 
 // RegenerateMain overwrites <root>/backend/main.go with the canonical
-// template read from fsys, substituting modulePath for the
-// [PROJECT-NAME] token. It unconditionally overwrites any existing
-// content — there is no diff/hand-edit detection by design.
+// template read from fsys, substituting modulePath for [PROJECT-NAME]. Any
+// existing content is replaced outright; there is no hand-edit detection.
 func RegenerateMain(fsys fs.FS, root, modulePath string) error {
 	data, err := fs.ReadFile(fsys, mainGoTemplatePath)
 	if err != nil {
@@ -30,11 +29,8 @@ func RegenerateMain(fsys fs.FS, root, modulePath string) error {
 
 	dest := filepath.Join(root, "backend", "main.go")
 
-	// Skip the write when content is already up to date. gonext dev
-	// calls RegenerateMain before every build, including rebuilds the
-	// watcher itself triggered; backend/main.go is a watched .go file,
-	// so an unconditional rewrite here would touch its mtime on every
-	// single build and re-trigger another rebuild — an infinite loop.
+	// Skip an unchanged write: main.go is a watched file, so touching its
+	// mtime here on every build would re-trigger the watcher forever.
 	if existing, err := os.ReadFile(dest); err == nil && bytes.Equal(existing, data) {
 		return nil
 	}

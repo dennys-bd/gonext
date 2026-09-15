@@ -23,10 +23,8 @@ func runAdd(args []string) int {
 	return runAddAgent(args[1:])
 }
 
-// runAddAgent implements `gonext add agent <tool>... [--force]`: it
-// writes the named tools' files into the generated project in the
-// current directory, refusing to overwrite existing ones unless
-// --force is given.
+// runAddAgent implements `gonext add agent <tool>... [--force]`, writing the
+// named tools' files into the project in the current directory.
 func runAddAgent(args []string) int {
 	names, force, err := parseAddAgentArgs(args)
 	if err != nil {

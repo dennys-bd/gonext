@@ -1,7 +1,6 @@
-// Package openapi builds the Huma API with every domain registered,
-// over whatever infrastructure it is handed, so `gonext openapi` can
-// produce the OpenAPI document with no database and no environment.
-// Nothing in a running server imports it.
+// Package openapi builds the Huma API with every domain registered, over
+// whatever infrastructure it is handed, so `gonext openapi` can produce the
+// document with no database and no environment. Nothing in a running server imports it.
 package openapi
 
 import (
@@ -19,11 +18,8 @@ type Spec struct {
 	API huma.API
 }
 
-// NewSpec assembles Spec. Its marker parameters (HealthzRegistered,
-// ReadyzRegistered, example.Registered, users.Registered) aren't
-// read; depending on them is what forces wire to run every
-// registration before Initialize returns — the same trick NewApp
-// uses.
+// NewSpec assembles Spec. Its marker parameters aren't read; depending on
+// them is what forces wire to run every registration before Initialize returns.
 func NewSpec(
 	humaAPI huma.API,
 	_ api.HealthzRegistered,

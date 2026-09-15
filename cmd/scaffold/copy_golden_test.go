@@ -13,39 +13,16 @@ import (
 	"github.com/dennys-bd/gonext/internal/scaffold"
 )
 
-// goldenSlug is the project slug used to generate the golden fixture
-// tree. It must stay in sync with cmd/golden's own goldenSlug and the
-// slug baked into golden/'s substituted content: run `make golden` to
-// regenerate golden/ if it ever changes.
+// goldenSlug must stay in sync with cmd/golden's own goldenSlug; run `make
+// golden` to regenerate golden/ if it ever changes.
 const goldenSlug = "golden-app"
 
-// goldenDir is the committed, runnable golden/ dev tree at the repo
-// root (see docs/superpowers/specs/2026-08-28-golden-app-runnable-tree-design.md),
-// resolved relative to this package's directory.
+// goldenDir is the committed, runnable golden/ dev tree, resolved relative
+// to this package's directory.
 const goldenDir = "../../golden"
 
-// TestCopy_GoldenSnapshot pins the real, full templates/ tree's
-// copy+substitution output byte-for-byte against the committed
-// golden/ dev tree. Unlike internal/scaffold's own copy tests, which
-// exercise Copy against a small synthetic fixture, this test runs
-// Copy against the actual embedded templates/ tree used by `gonext
-// init`, so it catches unintended output changes from either the
-// copy/substitution logic or edits to templates/ itself. It hits no
-// network or Docker, so it runs in the normal fast `go test` loop.
-//
-// golden/'s own go.mod/go.sum and its tool-generated build output
-// (frontend/node_modules/, frontend/.next/, backend/bin/) are
-// excluded from the comparison via isGeneratedArtifact: Copy never
-// writes those, so they were never part of the comparison even when
-// this test's fixture was testdata/golden (which never had them).
-// Agent tool state (.omc/) is excluded the same way, at any depth —
-// see toolStateDirs.
-//
-// When a template change is intentional, regenerate golden/ with:
-//
-//	make golden
-//
-// then review the resulting golden/ diff before committing it.
+// TestCopy_GoldenSnapshot pins Copy's output for the real embedded
+// templates/ tree byte-for-byte against the committed golden/ dev tree.
 func TestCopy_GoldenSnapshot(t *testing.T) {
 	dest := t.TempDir()
 
@@ -56,14 +33,9 @@ func TestCopy_GoldenSnapshot(t *testing.T) {
 	assertTreesEqual(t, goldenDir, dest)
 }
 
-// generatedDirs are top-level directories under golden/ that Copy()
-// never writes: dependencies pnpm/go install and build output `make
-// golden`'s underlying `gonext init` run produces, plus
-// frontend/lib/api, which `pnpm install`'s postinstall codegen step
-// generates from docs/openapi.yaml. They're excluded from the
-// golden-snapshot comparison — and, critically, never descended into
-// during the walk below, since pnpm's node_modules layout uses
-// symlinked directories that a naive file-read chokes on.
+// generatedDirs are top-level dirs under golden/ that Copy() never writes,
+// excluded from the comparison and never walked (pnpm's node_modules uses
+// symlinks a naive file-read chokes on).
 var generatedDirs = []string{
 	"frontend/node_modules",
 	"frontend/.next",
@@ -71,25 +43,17 @@ var generatedDirs = []string{
 	"backend/bin",
 }
 
-// generatedFiles are top-level files under golden/ that Copy() never
-// writes because a later runInit step produces them: go.mod/go.sum
-// (via `go mod init`/`tidy`) and .env (copied from the .env.example
-// Copy() does write).
+// generatedFiles are top-level files under golden/ that a later runInit step
+// produces rather than Copy().
 var generatedFiles = []string{"go.mod", "go.sum", ".env"}
 
-// toolStateDirs are directories agent tooling writes its own runtime
-// state into. Unlike generatedDirs these are not anchored to the top
-// level: a hook writes .omc/ relative to whatever directory a shell
-// happens to be sitting in, so one can appear at any depth under
-// golden/ simply because someone ran a command there. They are
-// gitignored, but this test walks the working tree rather than the
-// index, so without excluding them a stray hook write fails the
-// comparison as an unexpected file.
+// toolStateDirs are gitignored agent-tooling state dirs that can appear at
+// any depth (not just top-level), since a hook writes .omc/ relative to
+// whatever directory a shell happens to be in.
 var toolStateDirs = []string{".omc"}
 
-// isGeneratedArtifact reports whether rel is a tool-generated path
-// under golden/ that Copy never writes and so must be excluded from
-// the golden-snapshot comparison.
+// isGeneratedArtifact reports whether rel is a tool-generated path under
+// golden/ that Copy never writes.
 func isGeneratedArtifact(rel string) bool {
 	if slices.Contains(generatedFiles, rel) {
 		return true

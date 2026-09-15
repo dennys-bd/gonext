@@ -1,10 +1,6 @@
-// Package openapi produces a generated project's OpenAPI document
-// from this repo, without vendoring the spec-dumping command into
-// every scaffolded project: it materializes a temporary runner that
-// builds the project's API over infrastructure that never connects,
-// captures the YAML it prints, and either writes docs/openapi.yaml
-// (then regenerates the typed frontend client) or checks it for
-// drift.
+// Package openapi produces a generated project's OpenAPI document by
+// materializing a temporary runner that builds its API over infrastructure
+// that never connects, then writes or checks docs/openapi.yaml from it.
 package openapi
 
 import (

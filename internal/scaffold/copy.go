@@ -13,38 +13,26 @@ import (
 
 const projectNameToken = "[PROJECT-NAME]"
 
-// ModulePath is gonext itself. It is both the CLI and the core
-// library a generated project imports at runtime (today
-// github.com/dennys-bd/gonext/auth), so a project depends on the one
-// module rather than on a separately versioned contract.
+// ModulePath is gonext itself, both the CLI and the core library a
+// generated project imports at runtime.
 const ModulePath = "github.com/dennys-bd/gonext"
 
-// ModuleVersion is the gonext version `gonext init` pins into
-// generated projects. Bump it in the same change that tags a new
-// vX.Y.Z, so a project keeps building against the library its
-// scaffold was written for rather than drifting onto `latest`.
-//
-// It is a pseudo-version until the first release is tagged: gonext is
-// resolvable from any pushed commit, so generated projects build
-// today without waiting on a tag.
+// ModuleVersion is the gonext version `gonext init` pins into generated
+// projects; bump it in the same change that tags a new vX.Y.Z. It is a
+// pseudo-version until the first release is tagged.
 const ModuleVersion = "v0.0.0-20260912225425-d0ae2746462c"
 
 // binarySniffLen is how many leading bytes are inspected to decide
 // whether a file is binary, matching the heuristic Git itself uses.
 const binarySniffLen = 8192
 
-// generatedFileMode is the permission mode every file Copy writes
-// gets, regardless of the source's mode. embed.FS always reports its
-// entries as read-only (0444), and propagating that mode verbatim
-// would make every file in a generated project unwritable.
+// generatedFileMode is the mode every file Copy writes gets, since
+// embed.FS always reports its entries as read-only.
 const generatedFileMode = 0o644
 
-// Copy walks the tree rooted at root within fsys and writes every
-// file to dest. Text files have every occurrence of the
-// [PROJECT-NAME] token replaced with slug; files detected as binary
-// are copied verbatim. agents selects which agent-tool-owned paths
-// (see agentPaths) are written; a path owned by no tool is always
-// written regardless of agents.
+// Copy walks the tree rooted at root within fsys and writes every file to
+// dest, substituting [PROJECT-NAME] with slug in text files. agents selects
+// which agent-tool-owned paths (see agentPaths) get written.
 func Copy(fsys fs.FS, root, dest, slug string, agents []string) error {
 	selected := make(map[string]bool, len(agents))
 	for _, agent := range agents {
@@ -106,14 +94,9 @@ func copyFile(fsys fs.FS, path, target, slug string) error {
 // every generated project gets it unconditionally.
 const agentsDoc = "AGENTS.md"
 
-// AddAgents writes only the paths agents own (see agentPaths) from
-// the template tree rooted at root within fsys into the existing
-// project at dest, substituting slug exactly as Copy does. dest must
-// contain AGENTS.md. Every destination file is checked before any is
-// written: if one already exists and force is false, the error
-// names all of them and nothing is written; a symlink at any of them
-// is refused even with force. It returns the
-// dest-relative, slash-separated paths written, in walk order.
+// AddAgents writes only the paths agents own (see agentPaths) into the
+// existing project at dest, which must contain AGENTS.md. Nothing is written
+// if any destination file already exists (without force) or is a symlink.
 func AddAgents(fsys fs.FS, root, dest, slug string, agents []string, force bool) ([]string, error) {
 	if _, err := os.Stat(filepath.Join(dest, agentsDoc)); err != nil {
 		return nil, fmt.Errorf("no %s in %s: not a gonext project", agentsDoc, dest)
@@ -170,11 +153,9 @@ func AddAgents(fsys fs.FS, root, dest, slug string, agents []string, force bool)
 	return files, nil
 }
 
-// symlinkComponent reports the first component of rel under dest that
-// is a symlink, if any. A symlink anywhere on the path — a leaf like
-// CLAUDE.md or a directory like .claude, planted by a booby-trapped
-// checkout or pointing at a dotfile — would otherwise be followed by
-// MkdirAll/WriteFile and land the file outside the project.
+// symlinkComponent reports the first component of rel under dest that is a
+// symlink, if any — followed by MkdirAll/WriteFile it could land the write
+// outside the project.
 func symlinkComponent(dest, rel string) (string, bool) {
 	parts := strings.Split(rel, "/")
 	for i := range parts {

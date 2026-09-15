@@ -24,10 +24,8 @@ func Register(api huma.API, db *bun.DB, logger *slog.Logger) error {
 	return nil
 }
 
-// Registered is a marker type with no fields: its only purpose is to
-// give wire something to depend on, so it sequences Register's
-// side-effecting call into the generated injector instead of main.go
-// calling it by hand.
+// Registered is a marker wire depends on to sequence Register's
+// side-effecting call into the generated injector.
 type Registered struct{}
 
 // ProvideRegistration calls Register and returns a marker wire can

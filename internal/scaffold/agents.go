@@ -35,10 +35,8 @@ func AgentNames() []string {
 }
 
 // ParseAgents parses a comma-separated --agents list into a sorted,
-// deduplicated set of recognised tool names. "" and "none" both mean
-// no tools selected; "none" combined with any other name is an error,
-// since it would be ambiguous. An unrecognised name is an error
-// listing every valid one.
+// deduplicated set of recognised tool names. "" and "none" both mean no
+// tools; "none" combined with any other name is an ambiguity error.
 func ParseAgents(list string) ([]string, error) {
 	if list == "" || list == AgentsNone {
 		return nil, nil
@@ -59,11 +57,9 @@ func ParseAgents(list string) ([]string, error) {
 	return ParseAgentNames(names)
 }
 
-// ParseAgentNames validates names against the recognised tools and
-// returns them sorted and deduplicated. Unlike ParseAgents there is
-// no "none" shortcut: `gonext add agent` takes tool names
-// positionally, and "none" is as unknown there as any other
-// unrecognised name. An empty names is an empty selection.
+// ParseAgentNames validates names against the recognised tools and returns
+// them sorted and deduplicated. Unlike ParseAgents there is no "none"
+// shortcut here: "none" is as unrecognised as any other unknown name.
 func ParseAgentNames(names []string) ([]string, error) {
 	seen := map[string]bool{}
 	for _, name := range names {

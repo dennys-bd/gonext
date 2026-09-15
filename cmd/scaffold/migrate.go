@@ -13,10 +13,9 @@ import (
 
 const migrateUsage = "usage: gonext migrate [<domain>/<version>] [--yes]"
 
-// runMigrate implements `gonext migrate` and returns the process
-// exit code. With no target, it applies every pending migration; with
-// `<domain>/<version>`, it brings that domain to that version, in
-// either direction, confirming a non-empty rollback unless --yes.
+// runMigrate implements `gonext migrate`. With no target it applies every
+// pending migration; with `<domain>/<version>` it brings that domain to
+// that version, confirming a non-empty rollback unless --yes.
 func runMigrate(args []string) int {
 	target, yes, err := parseMigrateArgs(args)
 	if err != nil {
@@ -54,10 +53,8 @@ func runMigrate(args []string) int {
 	return 0
 }
 
-// parseMigrateArgs splits args into an optional positional
-// "<domain>/<version>" target and the --yes flag, which may appear
-// anywhere among them. More than one positional argument or any other
-// `--`-prefixed argument is a usage error.
+// parseMigrateArgs splits args into an optional positional target and the
+// --yes flag, which may appear anywhere among them.
 func parseMigrateArgs(args []string) (target string, yes bool, err error) {
 	for _, arg := range args {
 		if arg == "--yes" {

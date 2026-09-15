@@ -16,10 +16,9 @@ import (
 // service (e.g. Postgres via pg_isready) for health.
 const DefaultHealthTimeout = 30 * time.Second
 
-// Run executes name with args in dir, streaming stdout/stderr live to
-// the parent process so long-running steps show progress. stdin is
-// not forwarded: a tool that would prompt (pnpm, docker) gets EOF
-// instead of blocking on the terminal.
+// Run executes name with args in dir, streaming stdout/stderr live to the
+// parent process. stdin is not forwarded, so a tool that would prompt
+// (pnpm, docker) gets EOF instead of blocking on the terminal.
 func Run(ctx context.Context, dir string, name string, args ...string) error {
 	return run(ctx, dir, nil, name, args...)
 }

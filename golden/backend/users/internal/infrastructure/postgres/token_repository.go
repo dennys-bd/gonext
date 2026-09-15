@@ -25,9 +25,8 @@ func NewTokenRepository(db bun.IDB) *TokenRepository {
 	return &TokenRepository{db: db}
 }
 
-// tokenRow is Bun's row-mapping struct for the tokens table, which
-// holds both the email confirmation and password reset flows,
-// distinguished by kind.
+// tokenRow is Bun's row-mapping struct for the tokens table, which holds both
+// confirmation and reset flows, distinguished by kind.
 type tokenRow struct {
 	bun.BaseModel `bun:"table:tokens"`
 

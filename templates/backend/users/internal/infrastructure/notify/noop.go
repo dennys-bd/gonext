@@ -12,11 +12,9 @@ import (
 
 var _ domain.Notifier = (*Noop)(nil)
 
-// Noop is a domain.Notifier that delivers nothing and logs each
-// message it was asked to send at debug level. The raw token is part
-// of that log line deliberately: without a mailer it is the only way
-// to complete a confirmation or reset flow locally, which is also why
-// debug logging should stay off in production.
+// Noop is a domain.Notifier that delivers nothing and logs each message at debug
+// level, including the raw token — the only way to complete flows locally without
+// a mailer. Keep debug logging off in production.
 type Noop struct {
 	logger *slog.Logger
 }

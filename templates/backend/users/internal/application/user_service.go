@@ -20,16 +20,9 @@ const (
 	resetTokenTTL        = time.Hour
 )
 
-// IsRelaxedEnv reports whether env is a local development
-// environment, where the domain trades safety for workability: raw
-// one-shot tokens come back in responses (there is no mailer to
-// deliver them), unconfirmed accounts may log in, and the session
-// cookie drops its Secure flag so it survives plain http.
-//
-// Everything else — including stg — gets the restricted behaviour.
-// This is the single boundary the whole domain gates on; the HTTP
-// layer calls it too, so cookie policy and use-case policy can never
-// drift apart.
+// IsRelaxedEnv reports whether env relaxes safety for local development: raw
+// tokens are returned, unconfirmed logins are allowed, and the cookie drops Secure.
+// Everything else, including stg, is restricted; both the application and HTTP layers gate on this.
 func IsRelaxedEnv(env string) bool {
 	return env == "dev" || env == "test"
 }
@@ -58,22 +51,16 @@ func NewUserService(
 	return &UserService{store: store, tx: tx, issuer: issuer, notifier: notifier, hasher: hasher, env: env}
 }
 
-// RegisterResult is what Register tells the caller. DevToken carries
-// the raw confirmation token in a relaxed environment so tests and
-// local development can drive the confirm-email flow without a real
-// mailer; it is always empty otherwise.
+// RegisterResult is what Register returns. DevToken carries the raw
+// confirmation token in a relaxed environment (see IsRelaxedEnv) and is empty otherwise.
 type RegisterResult struct {
 	DevToken string
 }
 
-// Register creates an account for email and issues an email
-// confirmation token, or returns domain.ErrEmailTaken if the address
-// already has an account.
-//
-// The uniqueness check is the database's, not a prior lookup: the
-// insert is attempted and the constraint violation is what produces
-// ErrEmailTaken, so two concurrent registrations of the same address
-// cannot both succeed.
+// Register creates an account for email and issues an email confirmation token,
+// or returns domain.ErrEmailTaken if the address is already registered.
+// The uniqueness check happens at the database constraint, not a prior lookup, so
+// concurrent registrations of the same address cannot both succeed.
 func (s *UserService) Register(ctx context.Context, email, password string) (RegisterResult, error) {
 	now := time.Now().UTC()
 
@@ -187,11 +174,6 @@ func (s *UserService) Me(ctx context.Context, token string) (auth.Identity, doma
 }
 
 // Profile returns the account for userID.
-//
-// The auth middleware injects only an auth.Identity, deliberately:
-// widening the published contract to carry an email would put a
-// users-track concern into a type every provider must satisfy. The
-// one endpoint that renders the account pays one extra query instead.
 func (s *UserService) Profile(ctx context.Context, userID string) (domain.User, error) {
 	user, err := s.store.Users().GetByID(ctx, userID)
 	if err != nil {
@@ -212,10 +194,8 @@ func (s *UserService) ConfirmEmail(ctx context.Context, rawToken string) error {
 
 	return s.tx.RunInTx(ctx, func(ctx context.Context, st domain.Store) error {
 		if err := st.Tokens().MarkUsed(ctx, token.ID, now); err != nil {
-			// MarkUsed only matches an unconsumed token, so a miss here
-			// means a concurrent request consumed it between the read
-			// above and this write. That is the same outcome as a stale
-			// token, not a server fault.
+			// A miss means a concurrent request already consumed the token —
+			// same outcome as a stale token, not a server fault.
 			if errors.Is(err, domain.ErrTokenNotFound) {
 				return domain.ErrConfirmationTokenInvalid
 			}
@@ -228,10 +208,8 @@ func (s *UserService) ConfirmEmail(ctx context.Context, rawToken string) error {
 	})
 }
 
-// RequestPasswordReset issues a password reset token for email. An
-// unknown email is not an error and produces no token, so the caller
-// cannot tell registered emails from unregistered ones. (Register
-// deliberately does reveal this; this endpoint deliberately does not.)
+// RequestPasswordReset issues a password reset token for email. An unknown email
+// is not an error and produces no token, so the caller cannot enumerate registered emails.
 func (s *UserService) RequestPasswordReset(ctx context.Context, email string) (string, error) {
 	now := time.Now().UTC()
 
@@ -251,9 +229,8 @@ func (s *UserService) RequestPasswordReset(ctx context.Context, email string) (s
 		return "", fmt.Errorf("creating reset token: %w", err)
 	}
 
-	// SendAccountExistsNotice is the port's reset-token message: its
-	// payload is exactly (email, resetToken), so an explicit reset
-	// request reuses it rather than widening the port.
+	// SendAccountExistsNotice is the port's reset-token message (email, resetToken);
+	// reused here rather than widening the port.
 	if err := s.notifier.SendAccountExistsNotice(ctx, user.Email, token.ID); err != nil {
 		return "", fmt.Errorf("sending reset token: %w", err)
 	}
@@ -295,9 +272,7 @@ func (s *UserService) ConfirmPasswordReset(ctx context.Context, rawToken, newPas
 	})
 }
 
-// consumableToken loads rawToken and checks it is of kind and neither
-// expired nor already used, collapsing every failure into the single
-// domain error for that kind.
+// consumableToken collapses every failure into the single domain error for kind.
 func (s *UserService) consumableToken(ctx context.Context, rawToken string, kind domain.TokenKind, now time.Time) (domain.Token, error) {
 	invalid := invalidTokenError(kind)
 

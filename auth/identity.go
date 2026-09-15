@@ -1,16 +1,11 @@
-// Package auth is gonext's published authentication contract. It is
-// the one piece of a generated project that is imported rather than
-// scaffolded, so that a provider adapter written outside the project
-// — Clerk, Supabase, Auth0 — has a stable type to compile against.
-//
-// It depends on the standard library only, and must stay that way:
-// every generated backend takes it as a dependency.
+// Package auth is gonext's published authentication contract, the
+// one piece of a generated project that is imported rather than
+// scaffolded. It depends only on the standard library.
 package auth
 
 // Identity is the minimal identity a validated credential resolves
-// to — enough for the auth middleware to gate a route by role or
-// permission without a second lookup. Permissions is prefetched for
-// Role by the Resolver, not queried per HasPermission call.
+// to. Permissions is prefetched for Role, not queried per
+// HasPermission call.
 type Identity struct {
 	UserID      string
 	Role        string

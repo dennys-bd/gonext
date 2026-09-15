@@ -13,12 +13,9 @@ import (
 
 var _ domain.SessionIssuer = (*SessionIssuer)(nil)
 
-// SessionIssuer is an in-memory domain.SessionIssuer. It resolves
-// Identity from the users it shares with store, so a test can seed a
-// user through the repository and immediately validate a session for
-// it. Permissions are always empty: role_permissions is a
-// Postgres-only join, and every use case treats an empty slice as
-// valid.
+// SessionIssuer is an in-memory domain.SessionIssuer that resolves Identity from
+// the users it shares with store, so a seeded user can validate a session immediately.
+// Permissions are always empty: role_permissions is a Postgres-only join.
 type SessionIssuer struct {
 	mu       sync.Mutex
 	users    domain.UserRepository

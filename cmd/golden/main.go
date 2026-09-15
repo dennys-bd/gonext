@@ -1,8 +1,6 @@
-// Command golden regenerates the committed golden/ dev tree by
-// dogfooding `gonext init` against this repo's own templates/. It
-// never silently destroys an existing golden/: it backs it up first
-// (golden-old/), prompting when golden-old/ is already occupied. See
-// docs/superpowers/specs/2026-08-28-golden-app-runnable-tree-design.md.
+// Command golden regenerates the committed golden/ dev tree by dogfooding
+// `gonext init` against this repo's own templates/, backing up any existing
+// golden/ first.
 package main
 
 import (
@@ -55,9 +53,8 @@ func run() error {
 	return nil
 }
 
-// promptOverwrite asks whether to overwrite the existing
-// golden-old/ backup or keep it and give the current golden/ a
-// different backup name instead.
+// promptOverwrite asks whether to overwrite golden-old/ or keep it under a
+// different name.
 func promptOverwrite() (bool, error) {
 	var overwrite bool
 	field := huh.NewConfirm().
@@ -71,9 +68,8 @@ func promptOverwrite() (bool, error) {
 	return overwrite, nil
 }
 
-// promptBackupName interactively asks for the backup directory name
-// (used as golden-<name>), re-prompting until validateBackupName
-// accepts it.
+// promptBackupName asks for the golden-<name> suffix, re-prompting until
+// validateBackupName accepts it.
 func promptBackupName() (string, error) {
 	var name string
 	field := huh.NewInput().

@@ -22,10 +22,8 @@ var agentRelevantPaths = []string{
 	".github/workflows/ci.yml",
 }
 
-// TestCopy_AgentFileSets pins, per selection, exactly which
-// agent-relevant paths a Copy() run writes. It catches a broken
-// agentPaths ownership entry or a file that silently stops shipping
-// for its tool.
+// TestCopy_AgentFileSets pins, per selection, exactly which agent-relevant
+// paths a Copy() run writes.
 func TestCopy_AgentFileSets(t *testing.T) {
 	tests := []struct {
 		name    string

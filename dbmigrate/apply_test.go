@@ -16,10 +16,8 @@ import (
 )
 
 // openTestDB opens a bun.DB against TEST_DATABASE_URL, which must
-// point at a throwaway database: the helper drops bun_migrations and
-// bun_migration_locks both before returning and again on cleanup, so
-// pointing it at a real project's database would destroy its
-// migration bookkeeping.
+// point at a throwaway database — this drops its migration tables
+// before and after each test.
 func openTestDB(t *testing.T) *bun.DB {
 	t.Helper()
 
@@ -175,10 +173,8 @@ func mustAdd(t *testing.T, r *Registry, m Migration, up, down MigrationFunc, dep
 	}
 }
 
-// migrateTestRegistry builds users/0001, users/0002, users/0003,
-// orders/0001 After(users,0002), orders/0002 — the same shape
-// TestRegistry_Plan exercises — with up/down that record their key
-// (prefixed "up:"/"down:") to calls, in call order.
+// migrateTestRegistry builds the same shape TestRegistry_Plan
+// exercises, with up/down that record their key to calls, in order.
 func migrateTestRegistry(t *testing.T, calls *[]string) *Registry {
 	t.Helper()
 	up := func(key string) MigrationFunc {
@@ -278,10 +274,8 @@ func TestMigrate_BackwardRollsBackDependentsFirstAndUnmarks(t *testing.T) {
 	}
 }
 
-// TestMigrate_StateChangedBetweenPlanAndLockAborts uses the confirm
-// callback — which runs between planning and locking — to stand in
-// for a concurrent run that changes the applied set. The confirmed
-// plan no longer matches, so nothing must execute.
+// TestMigrate_StateChangedBetweenPlanAndLockAborts uses confirm (which
+// runs between planning and locking) to simulate a concurrent run.
 func TestMigrate_StateChangedBetweenPlanAndLockAborts(t *testing.T) {
 	db := openTestDB(t)
 	var calls []string

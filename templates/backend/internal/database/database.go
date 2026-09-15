@@ -1,7 +1,6 @@
-// Package database provides the cross-cutting Postgres connection
-// pool shared by every domain: Connect builds a pgx-backed pool,
-// wraps it as a database/sql handle, and hands back a *bun.DB for
-// domains to query through.
+// Package database provides the cross-cutting Postgres connection pool
+// shared by every domain: Connect builds a pgx-backed pool and hands back a
+// *bun.DB for domains to query through.
 package database
 
 import (
@@ -14,12 +13,8 @@ import (
 	"github.com/uptrace/bun/dialect/pgdialect"
 )
 
-// Connect builds a pgxpool.Pool for dsn, wraps it as a database/sql
-// handle via stdlib.OpenDBFromPool, and returns it as a *bun.DB. The
-// returned DB's underlying pool is genuinely pgxpool's, so
-// Postgres-aware pooling behavior (health checks before a connection
-// is handed out, before-acquire/after-release hooks) applies even
-// though Bun only sees a standard *sql.DB.
+// Connect builds a pgxpool.Pool for dsn and returns it as a *bun.DB, still
+// backed by pgxpool underneath so Postgres-aware pooling behavior applies.
 func Connect(ctx context.Context, dsn string) (*bun.DB, error) {
 	poolCfg, err := pgxpool.ParseConfig(dsn)
 	if err != nil {

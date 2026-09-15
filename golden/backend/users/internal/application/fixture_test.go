@@ -16,11 +16,8 @@ const (
 	testPassword = "correct horse battery staple"
 )
 
-// countingHasher is a deliberately trivial domain.PasswordHasher that
-// records how often it was called. Service tests use it instead of
-// Argon2id so they stay fast and can assert on hashing behaviour that
-// is otherwise invisible — notably that both registration branches
-// hash, which is what keeps them indistinguishable by timing.
+// countingHasher is a trivial domain.PasswordHasher used to assert that both
+// registration branches hash, which is what keeps their timing indistinguishable.
 type countingHasher struct {
 	mu           sync.Mutex
 	hashCalls    int
@@ -77,10 +74,8 @@ func newFixture(t *testing.T, env string) *fixture {
 	}
 }
 
-// registerAndConfirm registers email and consumes the confirmation
-// token so the account can log in under any Env. It reads the token
-// off the notifier rather than the Register result, since production
-// withholds the dev token.
+// registerAndConfirm reads the token off the notifier, not the Register result,
+// since production withholds the dev token.
 func (f *fixture) registerAndConfirm(t *testing.T, email, password string) domain.User {
 	t.Helper()
 	ctx := context.Background()

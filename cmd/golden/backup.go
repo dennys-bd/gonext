@@ -7,36 +7,22 @@ import (
 	"regexp"
 )
 
-// goldenDirName and goldenOldDirName are the canonical golden tree
-// and its default backup, both resolved relative to the repo root
-// (the directory `make golden` / `go run ./cmd/golden` is invoked
-// from).
+// goldenDirName and goldenOldDirName are resolved relative to the
+// repo root, the directory `make golden` is invoked from.
 const (
 	goldenDirName    = "golden"
 	goldenOldDirName = "golden-old"
 )
 
-// backupAction is the decision planBackup makes about what to do
-// with an existing golden/ tree before regenerating it.
 type backupAction int
 
 const (
-	// actionGenerate means golden/ doesn't exist yet: generate
-	// directly, nothing to back up.
 	actionGenerate backupAction = iota
-	// actionBackupThenGenerate means golden/ exists and golden-old/
-	// doesn't: move golden/ to golden-old/, then generate.
 	actionBackupThenGenerate
-	// actionNeedsPrompt means both golden/ and golden-old/ already
-	// exist: ask the developer whether to overwrite golden-old/ or
-	// keep it and give the current golden/ a different backup name.
 	actionNeedsPrompt
 )
 
-// planBackup decides what backupAction to take, given whether
-// golden/ and golden-old/ currently exist. It is pure so the three
-// cases described in the design doc are unit-testable without
-// touching the filesystem.
+// planBackup is pure so it's unit-testable without touching the filesystem.
 func planBackup(goldenExists, goldenOldExists bool) backupAction {
 	if !goldenExists {
 		return actionGenerate
@@ -47,18 +33,13 @@ func planBackup(goldenExists, goldenOldExists bool) backupAction {
 	return actionNeedsPrompt
 }
 
-// backupNamePattern mirrors scaffold.ValidateSlug's character rules:
-// a backup name becomes a `golden-<name>` directory, so it must be
-// safe to use as a single path segment.
+// backupNamePattern mirrors scaffold.ValidateSlug: the name becomes a
+// `golden-<name>` path segment, so it must be safe as one.
 var backupNamePattern = regexp.MustCompile(`^[a-z][a-z0-9-]*$`)
 
 // errInvalidBackupName is the sentinel wrapped by validateBackupName.
 var errInvalidBackupName = errors.New("invalid backup name")
 
-// validateBackupName reports whether name is safe to use as the
-// `golden-<name>` backup directory suffix: lowercase letters, digits,
-// and hyphens only, and it must not collide with the reserved
-// `golden`/`golden-old` directory names.
 func validateBackupName(name string) error {
 	if !backupNamePattern.MatchString(name) {
 		return fmt.Errorf("%w: %q must contain only lowercase letters, digits, and hyphens, and start with a lowercase letter", errInvalidBackupName, name)
@@ -117,10 +98,8 @@ func keepOldBackup(name string) error {
 	return nil
 }
 
-// resolveBackupPrompt asks the developer, via promptFn, whether to
-// overwrite the existing golden-old/ or keep it and give the current
-// golden/ a different backup name (collected via promptNameFn), then
-// applies the chosen action.
+// resolveBackupPrompt applies the developer's overwrite-or-rename choice
+// from promptFn and promptNameFn to the existing golden-old/ backup.
 func resolveBackupPrompt(promptFn func() (overwrite bool, err error), promptNameFn func() (string, error)) error {
 	overwrite, err := promptFn()
 	if err != nil {

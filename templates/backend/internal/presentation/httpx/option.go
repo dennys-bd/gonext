@@ -2,10 +2,7 @@ package httpx
 
 import "github.com/danielgtaylor/huma/v2"
 
-// Option adjusts the huma.Operation a verb function is building. The
-// set below covers what the registered routes actually declare;
-// further options get added when a route needs one, not in
-// anticipation.
+// Option adjusts the huma.Operation a verb function is building.
 type Option func(*huma.Operation)
 
 // Summary sets the operation's one-line summary.
@@ -24,10 +21,8 @@ func Status(code int) Option {
 	return func(op *huma.Operation) { op.DefaultStatus = code }
 }
 
-// Secured declares what the operation requires of the caller. It takes
-// the output of auth.Required, auth.RequireRole and
-// auth.RequirePermission unchanged; the auth middleware enforces it
-// before the handler runs.
+// Secured declares what the operation requires of the caller, taking the
+// output of auth.Required, RequireRole or RequirePermission unchanged.
 func Secured(security []map[string][]string) Option {
 	return func(op *huma.Operation) { op.Security = security }
 }

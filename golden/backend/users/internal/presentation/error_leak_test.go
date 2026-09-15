@@ -17,11 +17,9 @@ import (
 	"golden-app/backend/users/internal/infrastructure/memory"
 )
 
-// secretDetail stands in for the kind of text an unexpected error
-// carries in production — a driver message naming tables, columns, or
-// the host. None of it may reach the client.
-// Kept free of quotes so the assertion below can look for it
-// verbatim in slog's escaped output.
+// secretDetail stands in for the kind of text an unexpected error carries in
+// production (driver details) that must never reach the client. Kept free of
+// quotes so the assertion below matches slog's escaped output verbatim.
 const secretDetail = "pq: relation users_email_key does not exist on host db-primary-01"
 
 // failingStore is a domain.Store whose user repository always fails

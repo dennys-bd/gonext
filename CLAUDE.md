@@ -58,6 +58,15 @@ go test -race ./auth/... ./cmd/... ./dbmigrate/... ./internal/... .
 
 `cmd/scaffold/init_e2e_test.go` is opt-in only (`GONEXT_E2E=1`) since it hits the network and installs real dependencies into a temp dir — it's not part of the fast loop.
 
+## Doc comments
+
+Comments describe the contract, not the implementation. Nothing in this repo enforces comments (no linter); the convention is Effective Go's, kept short:
+
+- **Exported identifiers** get a doc comment: one sentence starting with the name, saying what it does. Add a second sentence only for something the caller must know and cannot see in the signature — an error condition, a panic, a precondition, a side effect on disk. Two to three lines is the ceiling.
+- **Unexported identifiers** get no comment by default. Add one line only when the *why* is non-obvious (a workaround, a deliberate trade-off, a subtle invariant).
+- **Never narrate the algorithm** in a doc comment. If the body is hard to follow, that is a reason to split the function or put a short inline comment at the confusing step, not to write a paragraph above it.
+- Don't restate the signature ("takes a ctx and a db and returns an error") and don't justify design choices in prose — that belongs in `roadmap.md` or the commit message.
+
 ## Docs
 
 - **Status lives on the [project board](https://github.com/users/dennys-bd/projects/6), never in a file.** Work is filed as GitHub issues in this repo and grouped on the board by label: `core-foundation`, `framework-gap`, `tech-debt`. When a change completes tracked work, close its issue from the PR (`Closes #N`) — do not add status markers to `roadmap.md`.

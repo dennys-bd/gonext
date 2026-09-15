@@ -9,11 +9,8 @@ import (
 	"golden-app/backend/users/domain"
 )
 
-// Both one-shot flows read the token before opening the transaction,
-// so a concurrent consumer can win the MarkUsed race. The loser must
-// see the flow's documented "invalid token" sentinel — which the HTTP
-// layer renders as 400 — not a wrapped repository error that would
-// escape as a 500.
+// A concurrent consumer can win the MarkUsed race; the loser must see the
+// documented invalid-token sentinel, not a wrapped error that escapes as a 500.
 func TestConfirmEmail_ConcurrentConsumeYieldsInvalidToken(t *testing.T) {
 	f := newFixture(t, "dev")
 	ctx := context.Background()
@@ -89,9 +86,8 @@ func TestConfirmEmail_SecondConsumeYieldsInvalidToken(t *testing.T) {
 	}
 }
 
-// raceConsumers runs consume in n goroutines released together,
-// returning how many succeeded and how many returned wantErr. Any
-// other error fails the test.
+// raceConsumers runs consume in n goroutines released together, returning wins
+// and losses against wantErr; any other error fails the test.
 func raceConsumers(t *testing.T, n int, consume func() error, wantErr error) (wins, losses int) {
 	t.Helper()
 

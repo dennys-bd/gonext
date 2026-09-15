@@ -77,12 +77,8 @@ func TestRegenerateMain_DoesNotRewriteWhenContentAlreadyMatches(t *testing.T) {
 		t.Fatalf("stat main.go: %v", err)
 	}
 
-	// A real build runs RegenerateMain before every compile, including
-	// when nothing about main.go actually changed; a rewrite here
-	// would touch backend/main.go's mtime, which the watcher observes
-	// as a .go change and re-triggers a rebuild — an infinite loop.
-	// Skipping the write when content is already identical is what
-	// breaks that loop.
+	// An unchanged rewrite must not touch mtime, or the watcher re-triggers
+	// forever.
 	time.Sleep(10 * time.Millisecond)
 	if err := RegenerateMain(fsys, root, "example.com/app"); err != nil {
 		t.Fatalf("second RegenerateMain: unexpected error: %v", err)

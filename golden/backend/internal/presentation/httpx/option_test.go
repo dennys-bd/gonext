@@ -11,9 +11,6 @@ import (
 	"golden-app/backend/internal/presentation/httpx"
 )
 
-// Each option must set exactly the huma.Operation field it names and
-// nothing else — the group builds the operation, the options are the
-// only way a route says anything about its own.
 func TestOptions_SetTheirOperationField(t *testing.T) {
 	security := []map[string][]string{{"cookie": {}}}
 
@@ -41,9 +38,6 @@ func TestOptions_SetTheirOperationField(t *testing.T) {
 	}
 }
 
-// Options reach the operation the group actually registers, and are
-// applied after the group's own fields so a route can still be read
-// off the generated OpenAPI document.
 func TestOptions_ApplyToTheRegisteredOperation(t *testing.T) {
 	_, api := humatest.New(t)
 	g := httpx.NewGroup(api, "/stubs", "Example", discardLogger())

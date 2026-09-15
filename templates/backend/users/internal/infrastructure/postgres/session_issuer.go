@@ -20,10 +20,8 @@ const SessionTTL = 30 * 24 * time.Hour
 
 var _ domain.SessionIssuer = (*SessionIssuer)(nil)
 
-// SessionIssuer is a Postgres-backed domain.SessionIssuer. Sessions
-// are opaque random tokens; only their SHA-256 digest is stored, so a
-// leaked database dump yields no usable session. Revoking deletes the
-// row, so it takes effect immediately.
+// SessionIssuer is a Postgres-backed domain.SessionIssuer. Only a session token's
+// SHA-256 digest is stored, so a leaked database dump yields no usable session.
 type SessionIssuer struct {
 	db  bun.IDB
 	ttl time.Duration
@@ -44,10 +42,8 @@ type sessionRow struct {
 	ExpiresAt time.Time `bun:"expires_at"`
 }
 
-// identityRow is one row of the Validate join: the session's user
-// plus at most one permission granted to that user's role. A user
-// whose role grants nothing still produces exactly one row, with a
-// NULL permission key.
+// identityRow is one row of the Validate join: the session's user plus at most
+// one permission for their role; a role with none still produces one row with a NULL key.
 type identityRow struct {
 	UserID          string         `bun:"user_id"`
 	Email           string         `bun:"email"`
@@ -76,11 +72,9 @@ func (i *SessionIssuer) Issue(ctx context.Context, userID string) (string, time.
 	return token, expiresAt, nil
 }
 
-// Validate resolves token to an Identity and the account behind it,
-// or domain.ErrSessionInvalid for an unknown or expired session. The
-// user's record and the role's permissions come back from the same
-// query, so neither a HasPermission check nor rendering the account
-// costs another round-trip.
+// Validate resolves token to an Identity and the account behind it, or
+// domain.ErrSessionInvalid for an unknown or expired session. Both come from one
+// query, so neither a HasPermission check nor rendering the account needs another.
 func (i *SessionIssuer) Validate(ctx context.Context, token string) (auth.Identity, domain.User, error) {
 	var rows []identityRow
 
@@ -139,11 +133,9 @@ func (i *SessionIssuer) Revoke(ctx context.Context, token string) error {
 	return nil
 }
 
-// hashSessionToken digests a raw session token for storage and
-// lookup. SHA-256 rather than Argon2id on purpose: the input is 256
-// random bits, so there is no dictionary to defend against and no
-// reason to pay a slow hash on every request. What this buys is that
-// a leaked sessions table contains no directly usable credential.
+// hashSessionToken digests a token for storage. SHA-256, not Argon2id: the input
+// is already 256 random bits, so there's no dictionary to defend against, and a
+// leaked table still yields no usable credential.
 func hashSessionToken(token string) string {
 	sum := sha256.Sum256([]byte(token))
 	return hex.EncodeToString(sum[:])

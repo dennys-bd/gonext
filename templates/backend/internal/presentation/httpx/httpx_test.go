@@ -22,9 +22,6 @@ type idOutput struct {
 	}
 }
 
-// Register must hand the handler a *Ctx carrying whatever identity is
-// already in the request context — that is the whole contract between
-// the middleware and a handler.
 func TestRegister_PassesInjectedIdentity(t *testing.T) {
 	_, api := humatest.New(t)
 
@@ -54,8 +51,6 @@ func TestRegister_PassesInjectedIdentity(t *testing.T) {
 	}
 }
 
-// *Ctx must satisfy context.Context so handlers can pass it straight
-// to services and repositories without unwrapping.
 func TestCtx_SatisfiesContext(t *testing.T) {
 	var _ context.Context = (*httpx.Ctx)(nil)
 

@@ -7,10 +7,8 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-// NewLoggingMiddleware returns Echo middleware that logs one line per
-// request via logger: method, path, status, duration, and the
-// request ID set by middleware.RequestID(). It logs at Info for
-// 2xx/3xx/4xx responses and Error for 5xx responses or handler errors.
+// NewLoggingMiddleware returns Echo middleware that logs one line per request
+// via logger, at Error for a 5xx status or handler error, Info otherwise.
 func NewLoggingMiddleware(logger *slog.Logger) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
