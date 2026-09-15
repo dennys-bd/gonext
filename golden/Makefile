@@ -1,4 +1,4 @@
-.PHONY: run build test vet tidy generate generate-check openapi openapi-check smoke lint vulncheck db-up db-down frontend-dev frontend-build frontend-test frontend-lint frontend-typecheck frontend-audit secrets-scan hooks-install
+.PHONY: run build test vet tidy openapi openapi-check smoke lint vulncheck db-up db-down frontend-dev frontend-build frontend-test frontend-lint frontend-typecheck frontend-audit secrets-scan hooks-install
 
 ENV ?= dev
 PORT ?= 8080
@@ -18,12 +18,6 @@ test: ## Bring up Postgres, migrate the test database, run all backend tests
 
 vet: ## Run go vet on the backend
 	mise exec -- go vet ./...
-
-generate: ## Regenerate wire_gen.go from the wire.go injector declarations
-	mise exec -- wire ./backend/...
-
-generate-check: ## Fail if wire_gen.go is stale relative to wire.go (fix with `make generate`)
-	mise exec -- wire diff ./backend/...
 
 openapi: ## Regenerate docs/openapi.yaml and the typed frontend client
 	gonext openapi

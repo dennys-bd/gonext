@@ -31,6 +31,15 @@ func TestInit_E2E(t *testing.T) {
 		t.Errorf("go build ./... failed in generated project: %v\n%s", err, out)
 	}
 
+	// Proves the `go get -tool` step landed the tool directive and
+	// the committed wire_gen.go files are fresh — the only place this
+	// runs, since it needs the real wire binary and go.mod.
+	wireCmd := exec.Command("go", "tool", "wire", "diff", "./backend/...")
+	wireCmd.Dir = dest
+	if out, err := wireCmd.CombinedOutput(); err != nil {
+		t.Errorf("go tool wire diff ./backend/... failed in generated project: %v\n%s", err, out)
+	}
+
 	pnpmCmd := exec.Command("pnpm", "install", "--frozen-lockfile")
 	pnpmCmd.Dir = filepath.Join(dest, "frontend")
 	if out, err := pnpmCmd.CombinedOutput(); err != nil {

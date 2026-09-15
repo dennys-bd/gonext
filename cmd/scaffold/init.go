@@ -73,6 +73,10 @@ func runInit(args []string) int {
 		fmt.Fprintln(os.Stderr, "error: pinning the gonext module failed:", err)
 		return 1
 	}
+	if err := xexec.Run(ctx, dest, "go", "get", "-tool", "github.com/google/wire/cmd/wire"); err != nil {
+		fmt.Fprintln(os.Stderr, "error: go get -tool wire failed:", err)
+		return 1
+	}
 	if err := xexec.Run(ctx, dest, "go", "mod", "tidy"); err != nil {
 		fmt.Fprintln(os.Stderr, "error: go mod tidy failed:", err)
 		return 1
