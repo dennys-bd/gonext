@@ -109,6 +109,37 @@ func TestApply_UsesGoRunFromBackendDirWithRunnerFilename(t *testing.T) {
 	}
 }
 
+func TestVet_UsesGoVetFromBackendDirWithRunnerFilenameAndCleansUp(t *testing.T) {
+	root := t.TempDir()
+	writeGoMod(t, root, "example.com/foo")
+	backendDir := mkBackendDir(t, root)
+
+	var gotDir, gotName string
+	var gotArgs []string
+	defer stubRunFunc(t, func(ctx context.Context, dir, name string, args ...string) error {
+		gotDir, gotName, gotArgs = dir, name, args
+		return nil
+	})()
+
+	if err := Vet(context.Background(), root); err != nil {
+		t.Fatalf("Vet: unexpected error: %v", err)
+	}
+
+	if gotDir != backendDir {
+		t.Errorf("Vet: dir = %q, want %q", gotDir, backendDir)
+	}
+	if gotName != "go" {
+		t.Errorf("Vet: name = %q, want %q", gotName, "go")
+	}
+	if len(gotArgs) != 2 || gotArgs[0] != "vet" || gotArgs[1] != runnerFilename {
+		t.Errorf("Vet: args = %v, want [vet %s]", gotArgs, runnerFilename)
+	}
+
+	if _, err := os.Stat(filepath.Join(backendDir, runnerFilename)); !os.IsNotExist(err) {
+		t.Errorf("Vet: expected runner file to be removed, stat err = %v", err)
+	}
+}
+
 func TestMigrate_PassesTargetAndYesToRunner(t *testing.T) {
 	root := t.TempDir()
 	writeGoMod(t, root, "example.com/foo")

@@ -17,11 +17,6 @@ const projectNameToken = "[PROJECT-NAME]"
 // generated project imports at runtime.
 const ModulePath = "github.com/dennys-bd/gonext"
 
-// ModuleVersion is the gonext version `gonext init` pins into generated
-// projects; bump it in the same change that tags a new vX.Y.Z. It is a
-// pseudo-version until the first release is tagged.
-const ModuleVersion = "v0.0.0-20260912225425-d0ae2746462c"
-
 // binarySniffLen is how many leading bytes are inspected to decide
 // whether a file is binary, matching the heuristic Git itself uses.
 const binarySniffLen = 8192

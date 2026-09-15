@@ -41,7 +41,7 @@ var runFunc = xexec.RunInteractive
 // root's module path and its migration imports substituted in, runs
 // it via `go run`, and removes it afterward regardless of outcome.
 func Apply(ctx context.Context, root string) error {
-	return run(ctx, root)
+	return run(ctx, root, "run")
 }
 
 // Migrate is Apply's sibling for bringing one domain to one version:
@@ -52,12 +52,17 @@ func Migrate(ctx context.Context, root string, target string, yes bool) error {
 	if yes {
 		args = append(args, "--yes")
 	}
-	return run(ctx, root, args...)
+	return run(ctx, root, "run", args...)
 }
 
-// run is Apply and Migrate's shared materialize/run/cleanup, with
-// runnerArgs passed through to the runner after runnerFilename.
-func run(ctx context.Context, root string, runnerArgs ...string) error {
+// Vet materializes the migration runner as Apply does and runs `go vet`
+// on it instead of `go run`, so the template is compiled without touching
+// the database.
+func Vet(ctx context.Context, root string) error {
+	return run(ctx, root, "vet")
+}
+
+func run(ctx context.Context, root, goCmd string, runnerArgs ...string) error {
 	imports, err := migrationImports(root)
 	if err != nil {
 		return err
@@ -70,9 +75,9 @@ func run(ctx context.Context, root string, runnerArgs ...string) error {
 	}
 	defer remove()
 
-	args := append([]string{"run", runnerFilename}, runnerArgs...)
+	args := append([]string{goCmd, runnerFilename}, runnerArgs...)
 	if err := runFunc(ctx, backendDir, "go", args...); err != nil {
-		return fmt.Errorf("running migrations: %w", err)
+		return fmt.Errorf("go %s %s: %w", goCmd, runnerFilename, err)
 	}
 	return nil
 }
