@@ -22,8 +22,8 @@ func limited(t *testing.T, cfg security.RateLimitConfig) *echo.Echo {
 }
 
 // hit issues one GET path request from remoteAddr and returns the
-// recorded response. A bare echo.New() has no IPExtractor, so RealIP()
-// falls back to RemoteAddr.
+// recorded response. A bare echo.New() has no IPExtractor, so the
+// limiter keys on RemoteAddr.
 func hit(e *echo.Echo, path, remoteAddr string) *httptest.ResponseRecorder {
 	req := httptest.NewRequest(http.MethodGet, path, nil)
 	req.RemoteAddr = remoteAddr
@@ -84,5 +84,39 @@ func TestRateLimit_BucketsArePerClientIP(t *testing.T) {
 	}
 	if rec := hit(e, "/x", "10.0.0.2:1"); rec.Code != http.StatusOK {
 		t.Fatalf("client 2 first hit: expected 200, got %d", rec.Code)
+	}
+}
+
+func TestRateLimit_IPv6SharesBucketPer64(t *testing.T) {
+	e := limited(t, security.RateLimitConfig{RPS: 0.001, Burst: 1})
+
+	if rec := hit(e, "/x", "[2001:db8:1:2::1]:1"); rec.Code != http.StatusOK {
+		t.Fatalf("first address in the /64: expected 200, got %d", rec.Code)
+	}
+	if rec := hit(e, "/x", "[2001:db8:1:2:ffff::9]:1"); rec.Code != http.StatusTooManyRequests {
+		t.Errorf("second address in the same /64: expected 429, got %d", rec.Code)
+	}
+	if rec := hit(e, "/x", "[2001:db8:1:3::1]:1"); rec.Code != http.StatusOK {
+		t.Errorf("address in a different /64: expected 200, got %d", rec.Code)
+	}
+}
+
+func TestRateLimit_IgnoresForwardingHeadersWithoutExtractor(t *testing.T) {
+	e := limited(t, security.RateLimitConfig{RPS: 0.001, Burst: 1})
+
+	for i, spoofed := range []string{"1.1.1.1", "2.2.2.2"} {
+		req := httptest.NewRequest(http.MethodGet, "/x", nil)
+		req.RemoteAddr = "10.0.0.1:1"
+		req.Header.Set(echo.HeaderXForwardedFor, spoofed)
+		req.Header.Set(echo.HeaderXRealIP, spoofed)
+		rec := httptest.NewRecorder()
+		e.ServeHTTP(rec, req)
+		want := http.StatusOK
+		if i == 1 {
+			want = http.StatusTooManyRequests
+		}
+		if rec.Code != want {
+			t.Errorf("hit %d with spoofed %s: expected %d, got %d", i, spoofed, want, rec.Code)
+		}
 	}
 }

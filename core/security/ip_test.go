@@ -78,3 +78,12 @@ func TestIPExtractor_RejectsBadCIDR(t *testing.T) {
 		t.Fatalf("expected an error naming %q, got %v", "nope", err)
 	}
 }
+
+func TestIPExtractor_RejectsCatchAllRange(t *testing.T) {
+	for _, cidr := range []string{"0.0.0.0/0", "::/0"} {
+		extractor, err := security.IPExtractor([]string{cidr})
+		if extractor != nil || err == nil || !strings.Contains(err.Error(), cidr) {
+			t.Errorf("%s: expected a nil extractor and an error naming it, got %v, %v", cidr, extractor, err)
+		}
+	}
+}
