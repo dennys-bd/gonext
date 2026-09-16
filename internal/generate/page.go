@@ -64,7 +64,7 @@ func Page(root, route, operationID string) ([]string, error) {
 	for i, t := range targets {
 		rootRel[i] = path.Join("frontend", "app", r.raw, t.name)
 	}
-	if err := checkTargetsAbsent(dir, targets, rootRel); err != nil {
+	if err := checkTargetsAbsent(root, rootRel); err != nil {
 		return nil, err
 	}
 
@@ -113,20 +113,20 @@ func pageTargets(m pageModel) []pageTarget {
 	}
 }
 
-// checkTargetsAbsent stats every target before anything is written,
-// so a conflict on the last file still leaves the first untouched. A
-// stat error other than "not exist" is reported rather than treated
-// as absent.
-func checkTargetsAbsent(dir string, targets []pageTarget, rootRel []string) error {
-	for i, t := range targets {
-		_, err := os.Stat(filepath.Join(dir, t.name))
+// checkTargetsAbsent stats every root-relative target before anything
+// is written, so a conflict on the last file still leaves the first
+// untouched. A stat error other than "not exist" is reported rather
+// than treated as absent.
+func checkTargetsAbsent(root string, rootRel []string) error {
+	for _, rel := range rootRel {
+		_, err := os.Stat(filepath.Join(root, filepath.FromSlash(rel)))
 		switch {
 		case err == nil:
-			return fmt.Errorf("%s already exists", rootRel[i])
+			return fmt.Errorf("%s already exists", rel)
 		case errors.Is(err, fs.ErrNotExist):
 			continue
 		default:
-			return fmt.Errorf("checking %s: %w", rootRel[i], err)
+			return fmt.Errorf("checking %s: %w", rel, err)
 		}
 	}
 	return nil

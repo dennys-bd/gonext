@@ -71,4 +71,38 @@ func TestInit_E2E(t *testing.T) {
 			t.Errorf("pnpm %s failed against the generated page: %v\n%s", script, err, out)
 		}
 	}
+
+	// The only place the generated resource slice is actually compiled,
+	// vetted, linted, tested and checked against the refreshed contract.
+	if code := runGenerateResource([]string{"example", "product", "title:string", "price:int", "--ops", "create,get,list,update,delete"}); code != 0 {
+		t.Fatalf("runGenerateResource(example product title:string price:int): expected exit code 0, got %d", code)
+	}
+
+	backendDir := filepath.Join(dest, "backend")
+
+	vetCmd := exec.Command("go", "vet", "./...")
+	vetCmd.Dir = backendDir
+	if out, err := vetCmd.CombinedOutput(); err != nil {
+		t.Errorf("go vet ./... failed against the generated resource: %v\n%s", err, out)
+	}
+
+	testCmd := exec.Command("go", "test", "./...")
+	testCmd.Dir = backendDir
+	if out, err := testCmd.CombinedOutput(); err != nil {
+		t.Errorf("go test ./... failed against the generated resource: %v\n%s", err, out)
+	}
+
+	if _, err := exec.LookPath("golangci-lint"); err != nil {
+		t.Logf("golangci-lint not found on PATH, skipping lint step")
+	} else {
+		lintCmd := exec.Command("golangci-lint", "run")
+		lintCmd.Dir = backendDir
+		if out, err := lintCmd.CombinedOutput(); err != nil {
+			t.Errorf("golangci-lint run failed against the generated resource: %v\n%s", err, out)
+		}
+	}
+
+	if code := runOpenAPI([]string{"--check"}); code != 0 {
+		t.Fatalf("runOpenAPI(--check): expected exit code 0, got %d", code)
+	}
 }

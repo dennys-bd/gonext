@@ -1,0 +1,46 @@
+meta {
+  name: Create Widget
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{baseUrl}}/widgets
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "name": "demo",
+    "count": 42,
+    "total": 42,
+    "ratio": 9.5,
+    "active": true,
+    "due": "2026-01-02T03:04:05Z"
+  }
+}
+
+assert {
+  res.status: eq 201
+}
+
+tests {
+  test("returns a non-empty id and echoes the fields", function () {
+    const body = res.getBody();
+    expect(body.id).to.be.a("string").and.not.empty;
+    expect(body.name).to.equal("demo");
+    expect(body.count).to.equal(42);
+    expect(body.total).to.equal(42);
+    expect(body.ratio).to.equal(9.5);
+    expect(body.active).to.equal(true);
+    expect(Date.parse(body.due)).to.equal(Date.parse("2026-01-02T03:04:05Z"));
+    expect(body.createdAt).to.be.a("string").and.not.empty;
+  });
+}
+
+script:post-response {
+  if (res.status === 201) {
+    bru.setVar("widgetId", res.body.id);
+  }
+}

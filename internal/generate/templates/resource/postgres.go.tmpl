@@ -1,0 +1,127 @@
+{{- $scan := or .Op.Get .Op.Update -}}
+{{- $fromRow := or .Op.Get .Op.List .Op.Update -}}
+{{if index .NewPackages "postgres"}}// Package postgres provides the {{.Domain}} domain's Postgres-backed
+// adapter for its repository ports.
+{{end}}package postgres
+
+import (
+	"context"
+{{if $scan}}	"database/sql"
+	"errors"
+{{end}}	"fmt"
+	"time"
+
+	"github.com/uptrace/bun"
+
+	"{{.Module}}/backend/{{.Domain}}/domain"
+)
+
+var _ domain.{{.Pascal}}Repository = (*{{.Pascal}}Repository)(nil)
+
+// {{.Pascal}}Repository is a Postgres-backed domain.{{.Pascal}}Repository over a
+// bun.IDB, so the same code runs against the pooled production *bun.DB
+// and against a test transaction via dbtest.
+type {{.Pascal}}Repository struct {
+	db bun.IDB
+}
+
+// New{{.Pascal}}Repository constructs a {{.Pascal}}Repository backed by db.
+func New{{.Pascal}}Repository(db bun.IDB) *{{.Pascal}}Repository {
+	return &{{.Pascal}}Repository{db: db}
+}
+
+// {{.Camel}}Row is Bun's row-mapping struct for the {{.Table}} table. It
+// stays in this package — domain.{{.Pascal}} has no infrastructure imports
+// or struct tags.
+type {{.Camel}}Row struct {
+	bun.BaseModel `bun:"table:{{.Table}}"`
+
+	ID string `bun:"id,pk"`
+{{range .Fields}}	{{.Pascal}} {{.Type.Go}} `bun:"{{.Column}}"`
+{{end}}	CreatedAt time.Time `bun:"created_at"`
+	UpdatedAt time.Time `bun:"updated_at"`
+}
+
+func to{{.Pascal}}Row({{.Camel}} domain.{{.Pascal}}) {{.Camel}}Row {
+	return {{.Camel}}Row{
+		ID: {{.Camel}}.ID,
+{{range .Fields}}		{{.Pascal}}: {{$.Camel}}.{{.Pascal}},
+{{end}}		CreatedAt: {{.Camel}}.CreatedAt,
+		UpdatedAt: {{.Camel}}.UpdatedAt,
+	}
+}
+{{if $fromRow}}
+func from{{.Pascal}}Row(row {{.Camel}}Row) domain.{{.Pascal}} {
+	return domain.{{.Pascal}}{
+		ID: row.ID,
+{{range .Fields}}		{{.Pascal}}: row.{{.Pascal}},
+{{end}}		CreatedAt: row.CreatedAt,
+		UpdatedAt: row.UpdatedAt,
+	}
+}
+{{end}}
+// Create stores {{.Camel}}.
+func (r *{{.Pascal}}Repository) Create(ctx context.Context, {{.Camel}} domain.{{.Pascal}}) error {
+	row := to{{.Pascal}}Row({{.Camel}})
+	if _, err := r.db.NewInsert().Model(&row).Exec(ctx); err != nil {
+		return fmt.Errorf("creating {{.Human}}: %w", err)
+	}
+	return nil
+}
+{{if .Op.Get}}
+// Get retrieves the {{.Pascal}} with the given id, or domain.Err{{.Pascal}}NotFound.
+func (r *{{.Pascal}}Repository) Get(ctx context.Context, id string) (domain.{{.Pascal}}, error) {
+	var row {{.Camel}}Row
+	if err := r.db.NewSelect().Model(&row).Where("id = ?", id).Scan(ctx); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return domain.{{.Pascal}}{}, domain.Err{{.Pascal}}NotFound
+		}
+		return domain.{{.Pascal}}{}, fmt.Errorf("querying {{.Human}}: %w", err)
+	}
+	return from{{.Pascal}}Row(row), nil
+}
+{{end}}{{if .Op.List}}
+// List returns up to limit {{.PluralPascal}} after skipping offset, newest first then by id.
+func (r *{{.Pascal}}Repository) List(ctx context.Context, limit, offset int) ([]domain.{{.Pascal}}, error) {
+	rows := make([]{{.Camel}}Row, 0)
+	err := r.db.NewSelect().Model(&rows).Order("created_at DESC", "id").Limit(limit).Offset(offset).Scan(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("listing {{.PluralHuman}}: %w", err)
+	}
+	{{.PluralCamel}} := make([]domain.{{.Pascal}}, 0, len(rows))
+	for _, row := range rows {
+		{{.PluralCamel}} = append({{.PluralCamel}}, from{{.Pascal}}Row(row))
+	}
+	return {{.PluralCamel}}, nil
+}
+{{end}}{{if .Op.Update}}
+// Update replaces the stored {{.Pascal}}'s fields and UpdatedAt with {{.Camel}}'s
+// in one write and returns the stored row, or domain.Err{{.Pascal}}NotFound.
+func (r *{{.Pascal}}Repository) Update(ctx context.Context, {{.Camel}} domain.{{.Pascal}}) (domain.{{.Pascal}}, error) {
+	row := to{{.Pascal}}Row({{.Camel}})
+	err := r.db.NewUpdate().Model(&row).Column({{range .Fields}}"{{.Column}}", {{end}}"updated_at").WherePK().Returning("*").Scan(ctx)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return domain.{{.Pascal}}{}, domain.Err{{.Pascal}}NotFound
+		}
+		return domain.{{.Pascal}}{}, fmt.Errorf("updating {{.Human}}: %w", err)
+	}
+	return from{{.Pascal}}Row(row), nil
+}
+{{end}}{{if .Op.Delete}}
+// Delete removes the {{.Pascal}} with the given id, or returns domain.Err{{.Pascal}}NotFound.
+func (r *{{.Pascal}}Repository) Delete(ctx context.Context, id string) error {
+	res, err := r.db.NewDelete().Model(&{{.Camel}}Row{ID: id}).WherePK().Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("deleting {{.Human}}: %w", err)
+	}
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("deleting {{.Human}}: %w", err)
+	}
+	if affected == 0 {
+		return domain.Err{{.Pascal}}NotFound
+	}
+	return nil
+}
+{{end}}

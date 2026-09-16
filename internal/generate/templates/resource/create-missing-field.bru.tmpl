@@ -1,0 +1,29 @@
+meta {
+  name: [[.Request]]
+  type: http
+  seq: [[.Seq]]
+}
+
+post {
+  url: {{baseUrl}}[[.Route]]
+  body: json
+  auth: none
+}
+[[if .Secured.Create]]
+headers {
+  Cookie: {{[[.SessionVar]]}}
+}
+[[end]]
+body:json {
+  {}
+}
+
+assert {
+  res.status: eq 422
+}
+
+tests {
+  test("lists the missing fields", function () {
+    expect(res.getBody().errors).to.be.an("array").and.not.empty;
+  });
+}

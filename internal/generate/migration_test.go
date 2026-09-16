@@ -102,3 +102,25 @@ func projectRoot(t *testing.T, domains ...string) string {
 	}
 	return root
 }
+
+func TestWriteMigration_WritesBodyVerbatim(t *testing.T) {
+	root := projectRoot(t, "users")
+	body := "package migrations\n// custom\n"
+
+	rel, err := writeMigration(root, "users", "create_things", body)
+	if err != nil {
+		t.Fatalf("writeMigration: unexpected error: %v", err)
+	}
+	want := "backend/users/migrations/0001_create_things.go"
+	if rel != want {
+		t.Errorf("writeMigration: rel = %q, want %q", rel, want)
+	}
+
+	data, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(rel)))
+	if err != nil {
+		t.Fatalf("reading written file: %v", err)
+	}
+	if string(data) != body {
+		t.Errorf("writeMigration: content = %q, want %q", data, body)
+	}
+}

@@ -1,0 +1,95 @@
+{{if index .NewPackages "memory"}}// Package memory provides an in-memory adapter for the {{.Domain}} domain's
+// repository ports.
+{{end}}package memory
+
+import (
+{{if .Op.List}}	"cmp"
+{{end}}	"context"
+{{if .Op.List}}	"slices"
+{{end}}	"sync"
+
+	"{{.Module}}/backend/{{.Domain}}/domain"
+)
+
+var _ domain.{{.Pascal}}Repository = (*{{.Pascal}}Repository)(nil)
+
+// {{.Pascal}}Repository is an in-memory, mutex-guarded domain.{{.Pascal}}Repository.
+type {{.Pascal}}Repository struct {
+	mu sync.Mutex
+	{{.PluralCamel}} map[string]domain.{{.Pascal}}
+}
+
+// New{{.Pascal}}Repository constructs an empty in-memory {{.Pascal}}Repository.
+func New{{.Pascal}}Repository() *{{.Pascal}}Repository {
+	return &{{.Pascal}}Repository{ {{.PluralCamel}}: make(map[string]domain.{{.Pascal}})}
+}
+
+// Create stores {{.Camel}}, keyed by its ID.
+func (r *{{.Pascal}}Repository) Create(_ context.Context, {{.Camel}} domain.{{.Pascal}}) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.{{.PluralCamel}}[{{.Camel}}.ID] = {{.Camel}}
+	return nil
+}
+{{if .Op.Get}}
+// Get retrieves the {{.Pascal}} with the given id, or domain.Err{{.Pascal}}NotFound.
+func (r *{{.Pascal}}Repository) Get(_ context.Context, id string) (domain.{{.Pascal}}, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	{{.Camel}}, ok := r.{{.PluralCamel}}[id]
+	if !ok {
+		return domain.{{.Pascal}}{}, domain.Err{{.Pascal}}NotFound
+	}
+	return {{.Camel}}, nil
+}
+{{end}}{{if .Op.List}}
+// List returns up to limit {{.PluralPascal}} after skipping offset, newest first
+// then by id, matching the Postgres adapter's order.
+func (r *{{.Pascal}}Repository) List(_ context.Context, limit, offset int) ([]domain.{{.Pascal}}, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	all := make([]domain.{{.Pascal}}, 0, len(r.{{.PluralCamel}}))
+	for _, {{.Camel}} := range r.{{.PluralCamel}} {
+		all = append(all, {{.Camel}})
+	}
+	slices.SortFunc(all, func(a, b domain.{{.Pascal}}) int {
+		if c := b.CreatedAt.Compare(a.CreatedAt); c != 0 {
+			return c
+		}
+		return cmp.Compare(a.ID, b.ID)
+	})
+	if offset >= len(all) {
+		return []domain.{{.Pascal}}{}, nil
+	}
+	all = all[offset:]
+	if limit < len(all) {
+		all = all[:limit]
+	}
+	return all, nil
+}
+{{end}}{{if .Op.Update}}
+// Update replaces the stored {{.Pascal}}'s fields and UpdatedAt with {{.Camel}}'s,
+// keeping its CreatedAt, or returns domain.Err{{.Pascal}}NotFound.
+func (r *{{.Pascal}}Repository) Update(_ context.Context, {{.Camel}} domain.{{.Pascal}}) (domain.{{.Pascal}}, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	stored, ok := r.{{.PluralCamel}}[{{.Camel}}.ID]
+	if !ok {
+		return domain.{{.Pascal}}{}, domain.Err{{.Pascal}}NotFound
+	}
+	{{.Camel}}.CreatedAt = stored.CreatedAt
+	r.{{.PluralCamel}}[{{.Camel}}.ID] = {{.Camel}}
+	return {{.Camel}}, nil
+}
+{{end}}{{if .Op.Delete}}
+// Delete removes the {{.Pascal}} with the given id, or returns domain.Err{{.Pascal}}NotFound.
+func (r *{{.Pascal}}Repository) Delete(_ context.Context, id string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if _, ok := r.{{.PluralCamel}}[id]; !ok {
+		return domain.Err{{.Pascal}}NotFound
+	}
+	delete(r.{{.PluralCamel}}, id)
+	return nil
+}
+{{end}}

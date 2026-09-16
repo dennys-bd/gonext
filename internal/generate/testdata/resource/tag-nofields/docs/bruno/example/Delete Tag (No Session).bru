@@ -1,0 +1,21 @@
+meta {
+  name: Delete Tag (No Session)
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{baseUrl}}/tags/does-not-exist
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 401
+}
+
+tests {
+  test("rejects the request with no session", function () {
+    expect(res.getBody().detail).to.be.a("string").and.not.empty;
+  });
+}

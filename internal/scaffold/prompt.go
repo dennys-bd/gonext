@@ -3,6 +3,7 @@ package scaffold
 import (
 	"errors"
 	"os"
+	"slices"
 
 	"github.com/charmbracelet/huh"
 	"github.com/mattn/go-isatty"
@@ -65,6 +66,24 @@ func PromptAgents() ([]string, error) {
 	}
 	field := huh.NewMultiSelect[string]().
 		Title("Agent tooling?").
+		Options(options...).
+		Value(&picked)
+	if err := huh.NewForm(huh.NewGroup(field)).Run(); err != nil {
+		return nil, err
+	}
+	return picked, nil
+}
+
+// PromptOps interactively asks which operations to generate, with
+// every one of all pre-selected.
+func PromptOps(all []string) ([]string, error) {
+	picked := slices.Clone(all)
+	options := make([]huh.Option[string], 0, len(all))
+	for _, op := range all {
+		options = append(options, huh.NewOption(op, op))
+	}
+	field := huh.NewMultiSelect[string]().
+		Title("Operations?").
 		Options(options...).
 		Value(&picked)
 	if err := huh.NewForm(huh.NewGroup(field)).Run(); err != nil {

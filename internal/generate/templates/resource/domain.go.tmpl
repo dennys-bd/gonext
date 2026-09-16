@@ -1,0 +1,30 @@
+{{if index .NewPackages "domain"}}// Package domain holds the {{.Domain}} domain's public entities, value
+// objects, domain errors, and repository ports. It depends on nothing
+// outside the standard library.
+{{end}}package domain
+
+import (
+	"context"
+	"errors"
+	"time"
+)
+
+// Err{{.Pascal}}NotFound is returned when a {{.Pascal}} cannot be found by id.
+var Err{{.Pascal}}NotFound = errors.New("{{.Domain}}: {{.Human}} not found")
+
+// {{.Pascal}} is the {{.Domain}} domain's {{.Human}} entity.
+type {{.Pascal}} struct {
+	ID string
+{{range .Fields}}	{{.Pascal}} {{.Type.Go}}
+{{end}}	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+// {{.Pascal}}Repository persists and retrieves {{.PluralPascal}}.
+type {{.Pascal}}Repository interface {
+{{if .Op.Create}}	Create(ctx context.Context, {{.Camel}} {{.Pascal}}) error
+{{end}}{{if .Op.Get}}	Get(ctx context.Context, id string) ({{.Pascal}}, error)
+{{end}}{{if .Op.List}}	List(ctx context.Context, limit, offset int) ([]{{.Pascal}}, error)
+{{end}}{{if .Op.Update}}	Update(ctx context.Context, {{.Camel}} {{.Pascal}}) ({{.Pascal}}, error)
+{{end}}{{if .Op.Delete}}	Delete(ctx context.Context, id string) error
+{{end}}}

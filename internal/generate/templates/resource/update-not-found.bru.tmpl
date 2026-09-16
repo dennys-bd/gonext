@@ -1,0 +1,28 @@
+meta {
+  name: [[.Request]]
+  type: http
+  seq: [[.Seq]]
+}
+
+put {
+  url: {{baseUrl}}[[.Route]]/does-not-exist
+  body: json
+  auth: none
+}
+[[if .Secured.Update]]
+headers {
+  Cookie: {{[[.SessionVar]]}}
+}
+[[end]]
+body:json {
+[[template "updated-body" .Fields]]}
+
+assert {
+  res.status: eq 404
+}
+
+tests {
+  test("error detail mentions [[.Human]] not found", function () {
+    expect(res.getBody().detail).to.include("[[.Human]] not found");
+  });
+}

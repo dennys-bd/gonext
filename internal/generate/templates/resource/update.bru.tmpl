@@ -1,0 +1,31 @@
+meta {
+  name: [[.Request]]
+  type: http
+  seq: [[.Seq]]
+}
+
+put {
+  url: {{baseUrl}}[[.Route]]/{{[[.IDVar]]}}
+  body: json
+  auth: none
+}
+[[if .Secured.Update]]
+headers {
+  Cookie: {{[[.SessionVar]]}}
+}
+[[end]]
+body:json {
+[[template "updated-body" .Fields]]}
+
+assert {
+  res.status: eq 200
+}
+
+tests {
+  test("replaces every field of the [[.Human]] [[if .Op.Create]]created by Create [[.Title]][[else]]{{[[.IDVar]]}} names[[end]]", function () {
+    const body = res.getBody();
+    expect(body.id).to.equal(bru.getVar("[[.IDVar]]"));
+[[range .Fields]]    [[.BruExpectUpdated]];
+[[end]]    expect(body.updatedAt).to.be.a("string").and.not.empty;
+  });
+}

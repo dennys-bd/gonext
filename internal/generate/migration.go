@@ -50,19 +50,34 @@ const dirMode = 0o755
 // root with the domain's next sequence number and returns its
 // root-relative slash path. It never creates a domain.
 func Migration(root, domain, name string) (string, error) {
-	// The same character set dbmigrate's path regex accepts, which
-	// also keeps a domain from naming a path outside backend/.
-	if domain == "internal" || !migrationNameRE.MatchString(domain) {
-		return "", fmt.Errorf("no such domain backend/%s", domain)
-	}
-	info, err := os.Stat(filepath.Join(root, "backend", domain))
-	if err != nil || !info.IsDir() {
-		return "", fmt.Errorf("no such domain backend/%s", domain)
+	if err := checkDomain(root, domain); err != nil {
+		return "", err
 	}
 	if !migrationNameRE.MatchString(name) {
 		return "", fmt.Errorf("invalid migration name %q: use snake_case", name)
 	}
+	return writeMigration(root, domain, name, migrationSkeleton)
+}
 
+// checkDomain reports whether backend/<domain> exists under root as a
+// directory, with the error every generator gives for a missing one.
+func checkDomain(root, domain string) error {
+	// The same character set dbmigrate's path regex accepts, which
+	// also keeps a domain from naming a path outside backend/.
+	if domain == "internal" || !migrationNameRE.MatchString(domain) {
+		return fmt.Errorf("no such domain backend/%s", domain)
+	}
+	info, err := os.Stat(filepath.Join(root, "backend", domain))
+	if err != nil || !info.IsDir() {
+		return fmt.Errorf("no such domain backend/%s", domain)
+	}
+	return nil
+}
+
+// writeMigration writes body as backend/<domain>/migrations/<NNNN>_<name>.go
+// with the domain's next sequence number and returns its root-relative
+// slash path. It never truncates an existing file.
+func writeMigration(root, domain, name, body string) (string, error) {
 	dir := filepath.Join(root, "backend", domain, "migrations")
 	version, err := nextVersion(dir)
 	if err != nil {
@@ -73,18 +88,8 @@ func Migration(root, domain, name string) (string, error) {
 		return "", fmt.Errorf("creating %s: %w", dir, err)
 	}
 	filename := version + "_" + name + ".go"
-	// O_EXCL: never truncate a file that appeared between the scan
-	// and the write, or one the developer created by hand.
-	f, err := os.OpenFile(filepath.Join(dir, filename), os.O_WRONLY|os.O_CREATE|os.O_EXCL, fileMode)
-	if err != nil {
-		return "", fmt.Errorf("writing %s: %w", filename, err)
-	}
-	if _, err := f.WriteString(migrationSkeleton); err != nil {
-		f.Close()
-		return "", fmt.Errorf("writing %s: %w", filename, err)
-	}
-	if err := f.Close(); err != nil {
-		return "", fmt.Errorf("writing %s: %w", filename, err)
+	if err := writeExclusive(filepath.Join(dir, filename), []byte(body)); err != nil {
+		return "", err
 	}
 
 	return path.Join("backend", domain, "migrations", filename), nil

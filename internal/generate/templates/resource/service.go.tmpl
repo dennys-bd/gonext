@@ -1,0 +1,69 @@
+{{if index .NewPackages "application"}}// Package application holds the {{.Domain}} domain's use cases. Depends
+// only on {{.Domain}}/domain — never imports infrastructure or presentation.
+{{end}}package application
+
+import (
+	"context"
+{{if .Op.Create}}	"crypto/rand"
+	"encoding/hex"
+{{end}}{{if or .Op.Create .Op.Update}}	"time"
+{{end}}
+	"{{.Module}}/backend/{{.Domain}}/domain"
+)
+
+// {{.Pascal}}Service implements the {{.Domain}} domain's {{.Human}} use cases.
+type {{.Pascal}}Service struct {
+	repo domain.{{.Pascal}}Repository
+}
+
+// New{{.Pascal}}Service constructs a {{.Pascal}}Service backed by repo.
+func New{{.Pascal}}Service(repo domain.{{.Pascal}}Repository) *{{.Pascal}}Service {
+	return &{{.Pascal}}Service{repo: repo}
+}
+{{if .Op.Create}}
+// Create{{.Pascal}} creates and persists a new {{.Pascal}}.
+func (s *{{.Pascal}}Service) Create{{.Pascal}}(ctx context.Context{{range .Fields}}, {{.Camel}} {{.Type.Go}}{{end}}) (domain.{{.Pascal}}, error) {
+	now := time.Now().UTC()
+	{{.Camel}} := domain.{{.Pascal}}{
+		ID: new{{.Pascal}}ID(),
+{{range .Fields}}		{{.Pascal}}: {{.Camel}},
+{{end}}		CreatedAt: now,
+		UpdatedAt: now,
+	}
+	if err := s.repo.Create(ctx, {{.Camel}}); err != nil {
+		return domain.{{.Pascal}}{}, err
+	}
+	return {{.Camel}}, nil
+}
+{{end}}{{if .Op.Get}}
+// Get{{.Pascal}} retrieves a {{.Pascal}} by id.
+func (s *{{.Pascal}}Service) Get{{.Pascal}}(ctx context.Context, id string) (domain.{{.Pascal}}, error) {
+	return s.repo.Get(ctx, id)
+}
+{{end}}{{if .Op.List}}
+// List{{.PluralPascal}} retrieves up to limit {{.PluralPascal}} after skipping offset, newest first.
+func (s *{{.Pascal}}Service) List{{.PluralPascal}}(ctx context.Context, limit, offset int) ([]domain.{{.Pascal}}, error) {
+	return s.repo.List(ctx, limit, offset)
+}
+{{end}}{{if .Op.Update}}
+// Update{{.Pascal}} replaces the fields of the {{.Pascal}} with the given id and returns the stored result.
+func (s *{{.Pascal}}Service) Update{{.Pascal}}(ctx context.Context, id string{{range .Fields}}, {{.Camel}} {{.Type.Go}}{{end}}) (domain.{{.Pascal}}, error) {
+	return s.repo.Update(ctx, domain.{{.Pascal}}{
+		ID: id,
+{{range .Fields}}		{{.Pascal}}: {{.Camel}},
+{{end}}		UpdatedAt: time.Now().UTC(),
+	})
+}
+{{end}}{{if .Op.Delete}}
+// Delete{{.Pascal}} removes the {{.Pascal}} with the given id.
+func (s *{{.Pascal}}Service) Delete{{.Pascal}}(ctx context.Context, id string) error {
+	return s.repo.Delete(ctx, id)
+}
+{{end}}{{if .Op.Create}}
+// new{{.Pascal}}ID generates a random hex id.
+func new{{.Pascal}}ID() string {
+	b := make([]byte, 16)
+	_, _ = rand.Read(b)
+	return hex.EncodeToString(b)
+}
+{{end}}

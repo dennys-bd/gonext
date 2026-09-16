@@ -1,0 +1,150 @@
+{{- $body := or .Op.Create .Op.Update -}}
+{{- $item := or .Op.Create .Op.Get .Op.List .Op.Update -}}
+{{- $output := or .Op.Create .Op.Get .Op.Update -}}
+{{- $idInput := or .Op.Get .Op.Delete -}}
+{{if index .NewPackages "presentation"}}// Package presentation exposes the {{.Domain}} domain's HTTP operations on
+// a shared huma.API, translating domain errors into HTTP status codes.
+{{end}}package presentation
+
+import (
+	"log/slog"
+	"net/http"
+{{if $item}}	"time"
+{{end}}
+	"github.com/danielgtaylor/huma/v2"
+{{if .AnySecured}}	"github.com/dennys-bd/gonext/auth"
+{{end}}
+	"{{.Module}}/backend/{{.Domain}}/domain"
+	"{{.Module}}/backend/{{.Domain}}/internal/application"
+	"{{.Module}}/backend/internal/presentation/httpx"
+)
+{{if $body}}
+// {{.Camel}}Body is the request body shared by create and update.
+type {{.Camel}}Body struct{{if .HasFields}} {
+{{range .Fields}}	{{.Pascal}} {{.Type.Go}} `json:"{{.Camel}}"{{if .Type.HumaTags}} {{.Type.HumaTags}}{{end}}{{if .Type.JSONFormat}} format:"{{.Type.JSONFormat}}"{{end}}`
+{{end}}}{{else}}{}{{end}}
+{{end}}{{if $item}}
+type {{.Camel}}Item struct {
+	ID string `json:"id"`
+{{range .Fields}}	{{.Pascal}} {{.Type.Go}} `json:"{{.Camel}}"`
+{{end}}	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
+}
+{{end}}{{if .Op.Create}}
+type create{{.Pascal}}Input struct {
+	Body {{.Camel}}Body
+}
+{{end}}{{if $idInput}}
+type {{.Camel}}IDInput struct {
+	ID string `path:"id" doc:"{{.Pascal}} id"`
+}
+{{end}}{{if .Op.List}}
+type list{{.PluralPascal}}Input struct {
+	Limit int `query:"limit" default:"50" minimum:"1" maximum:"200"`
+	Offset int `query:"offset" minimum:"0"`
+}
+{{end}}{{if .Op.Update}}
+type update{{.Pascal}}Input struct {
+	ID string `path:"id" doc:"{{.Pascal}} id"`
+	Body {{.Camel}}Body
+}
+{{end}}{{if $output}}
+type {{.Camel}}Output struct {
+	Body {{.Camel}}Item
+}
+{{end}}{{if .Op.List}}
+type list{{.PluralPascal}}Output struct {
+	Body struct {
+		Items []{{.Camel}}Item `json:"items"`
+	}
+}
+{{end}}
+type {{.Camel}}Handlers struct {
+	svc *application.{{.Pascal}}Service
+}
+
+// Register{{.Pascal}} registers the {{.Human}} endpoints under {{.Route}} on api,
+// backed by svc. Unmapped errors are logged through logger and returned
+// to the client as a flat 500.
+func Register{{.Pascal}}(api huma.API, svc *application.{{.Pascal}}Service, logger *slog.Logger) {
+	h := &{{.Camel}}Handlers{svc: svc}
+	g := httpx.NewGroup(api, "{{.Route}}", "{{.DomainPascal}}", logger).Errors(
+		httpx.Map(domain.Err{{.Pascal}}NotFound, http.StatusNotFound),
+	)
+{{if .Op.Create}}
+	httpx.Post(g, "", "{{index .OpID "create"}}", h.create{{.Pascal}},
+		httpx.Summary("Create a {{.Human}}"),
+		httpx.Status(http.StatusCreated){{if .Secured.Create}},
+		httpx.Secured(auth.Required()){{end}})
+{{end}}{{if .Op.Get}}
+	httpx.Get(g, "/{id}", "{{index .OpID "get"}}", h.get{{.Pascal}},
+		httpx.Summary("Get a {{.Human}} by id"){{if .Secured.Get}},
+		httpx.Secured(auth.Required()){{end}})
+{{end}}{{if .Op.List}}
+	httpx.Get(g, "", "{{index .OpID "list"}}", h.list{{.PluralPascal}},
+		httpx.Summary("List {{.PluralHuman}}"){{if .Secured.List}},
+		httpx.Secured(auth.Required()){{end}})
+{{end}}{{if .Op.Update}}
+	httpx.Put(g, "/{id}", "{{index .OpID "update"}}", h.update{{.Pascal}},
+		httpx.Summary("Replace a {{.Human}}"){{if .Secured.Update}},
+		httpx.Secured(auth.Required()){{end}})
+{{end}}{{if .Op.Delete}}
+	httpx.Delete(g, "/{id}", "{{index .OpID "delete"}}", h.delete{{.Pascal}},
+		httpx.Summary("Delete a {{.Human}}"),
+		httpx.Status(http.StatusNoContent){{if .Secured.Delete}},
+		httpx.Secured(auth.Required()){{end}})
+{{end}}}
+{{if .Op.Create}}
+func (h *{{.Camel}}Handlers) create{{.Pascal}}(ctx *httpx.Ctx, {{if .HasFields}}in{{else}}_{{end}} *create{{.Pascal}}Input) (*{{.Camel}}Output, error) {
+	{{.Camel}}, err := h.svc.Create{{.Pascal}}(ctx{{range .Fields}}, in.Body.{{.Pascal}}{{end}})
+	if err != nil {
+		return nil, err
+	}
+	return &{{.Camel}}Output{Body: to{{.Pascal}}Item({{.Camel}})}, nil
+}
+{{end}}{{if .Op.Get}}
+func (h *{{.Camel}}Handlers) get{{.Pascal}}(ctx *httpx.Ctx, in *{{.Camel}}IDInput) (*{{.Camel}}Output, error) {
+	{{.Camel}}, err := h.svc.Get{{.Pascal}}(ctx, in.ID)
+	if err != nil {
+		return nil, err
+	}
+	return &{{.Camel}}Output{Body: to{{.Pascal}}Item({{.Camel}})}, nil
+}
+{{end}}{{if .Op.List}}
+func (h *{{.Camel}}Handlers) list{{.PluralPascal}}(ctx *httpx.Ctx, in *list{{.PluralPascal}}Input) (*list{{.PluralPascal}}Output, error) {
+	{{.PluralCamel}}, err := h.svc.List{{.PluralPascal}}(ctx, in.Limit, in.Offset)
+	if err != nil {
+		return nil, err
+	}
+	out := &list{{.PluralPascal}}Output{}
+	out.Body.Items = make([]{{.Camel}}Item, 0, len({{.PluralCamel}}))
+	for _, {{.Camel}} := range {{.PluralCamel}} {
+		out.Body.Items = append(out.Body.Items, to{{.Pascal}}Item({{.Camel}}))
+	}
+	return out, nil
+}
+{{end}}{{if .Op.Update}}
+func (h *{{.Camel}}Handlers) update{{.Pascal}}(ctx *httpx.Ctx, in *update{{.Pascal}}Input) (*{{.Camel}}Output, error) {
+	{{.Camel}}, err := h.svc.Update{{.Pascal}}(ctx, in.ID{{range .Fields}}, in.Body.{{.Pascal}}{{end}})
+	if err != nil {
+		return nil, err
+	}
+	return &{{.Camel}}Output{Body: to{{.Pascal}}Item({{.Camel}})}, nil
+}
+{{end}}{{if .Op.Delete}}
+func (h *{{.Camel}}Handlers) delete{{.Pascal}}(ctx *httpx.Ctx, in *{{.Camel}}IDInput) (*struct{}, error) {
+	if err := h.svc.Delete{{.Pascal}}(ctx, in.ID); err != nil {
+		return nil, err
+	}
+	return &struct{}{}, nil
+}
+{{end}}{{if $item}}
+func to{{.Pascal}}Item({{.Camel}} domain.{{.Pascal}}) {{.Camel}}Item {
+	return {{.Camel}}Item{
+		ID: {{.Camel}}.ID,
+{{range .Fields}}		{{.Pascal}}: {{$.Camel}}.{{.Pascal}},
+{{end}}		CreatedAt: {{.Camel}}.CreatedAt,
+		UpdatedAt: {{.Camel}}.UpdatedAt,
+	}
+}
+{{end}}

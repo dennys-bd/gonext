@@ -1,0 +1,29 @@
+meta {
+  name: Create Product (Missing Field)
+  type: http
+  seq: 16
+}
+
+post {
+  url: {{baseUrl}}/products
+  body: json
+  auth: none
+}
+
+headers {
+  Cookie: {{exampleSessionCookie}}
+}
+
+body:json {
+  {}
+}
+
+assert {
+  res.status: eq 422
+}
+
+tests {
+  test("lists the missing fields", function () {
+    expect(res.getBody().errors).to.be.an("array").and.not.empty;
+  });
+}

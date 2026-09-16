@@ -1,0 +1,11 @@
+[[/* JSON bodies shared by the request templates, rendered from .Fields. */]]
+[[define "body"]][[if .]]  {[[range $i, $f := .]][[if $i]],[[end]]
+    "[[$f.Camel]]": [[$f.Type.BruSample]][[end]]
+  }
+[[else]]  {}
+[[end]][[end]]
+[[define "updated-body"]][[if .]]  {[[range $i, $f := .]][[if $i]],[[end]]
+    "[[$f.Camel]]": [[$f.Type.BruUpdated]][[end]]
+  }
+[[else]]  {}
+[[end]][[end]]

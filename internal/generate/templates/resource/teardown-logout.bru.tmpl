@@ -1,0 +1,27 @@
+meta {
+  name: [[.Request]]
+  type: http
+  seq: [[.Seq]]
+}
+
+post {
+  url: {{baseUrl}}/users/logout
+  body: none
+  auth: none
+}
+
+headers {
+  Cookie: {{[[.SessionVar]]}}
+}
+
+assert {
+  res.status: eq 204
+}
+
+script:post-response {
+  // Bruno shares one cookie jar across the whole run. Without this
+  // teardown the session this folder established would still be in
+  // the jar when the next folder runs, and its "no session" cases
+  // would arrive authenticated.
+  bru.setVar("[[.SessionVar]]", "");
+}

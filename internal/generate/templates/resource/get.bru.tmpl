@@ -1,0 +1,30 @@
+meta {
+  name: [[.Request]]
+  type: http
+  seq: [[.Seq]]
+}
+
+get {
+  url: {{baseUrl}}[[.Route]]/{{[[.IDVar]]}}
+  body: none
+  auth: none
+}
+[[if .Secured.Get]]
+headers {
+  Cookie: {{[[.SessionVar]]}}
+}
+[[end]]
+assert {
+  res.status: eq 200
+}
+
+tests {
+[[if .Op.Create]]  test("returns the [[.Human]] created by Create [[.Title]]", function () {
+    const body = res.getBody();
+    expect(body.id).to.equal(bru.getVar("[[.IDVar]]"));
+[[range .Fields]]    [[.BruExpect]];
+[[end]]  });
+[[else]]  test("returns the [[.Human]] {{[[.IDVar]]}} names", function () {
+    expect(res.getBody().id).to.equal(bru.getVar("[[.IDVar]]"));
+  });
+[[end]]}

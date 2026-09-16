@@ -1,0 +1,117 @@
+{{- $seed := or .Op.List .Op.Update .Op.Delete -}}
+{{- $notFound := or .Op.Get .Op.Update .Op.Delete -}}
+package application
+
+import (
+	"context"
+{{if $notFound}}	"errors"
+{{end}}	"testing"
+{{if or $seed (and .ImportsTime (or .Op.Create .Op.Update))}}	"time"
+{{end}}
+{{if or .Op.Get $seed}}	"{{.Module}}/backend/{{.Domain}}/domain"
+{{end}}	"{{.Module}}/backend/{{.Domain}}/internal/infrastructure/memory"
+)
+{{if $seed}}
+func seed{{.Pascal}}(t *testing.T, repo *memory.{{.Pascal}}Repository, id string) domain.{{.Pascal}} {
+	t.Helper()
+	at := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	{{.Camel}} := domain.{{.Pascal}}{
+		ID: id,
+{{range .Fields}}		{{.Pascal}}: {{.Type.GoSample}},
+{{end}}		CreatedAt: at,
+		UpdatedAt: at,
+	}
+	if err := repo.Create(context.Background(), {{.Camel}}); err != nil {
+		t.Fatalf("seeding a {{.Human}}: %v", err)
+	}
+	return {{.Camel}}
+}
+{{end}}{{if .Op.Create}}
+func Test{{.Pascal}}Service_Create(t *testing.T) {
+	repo := memory.New{{.Pascal}}Repository()
+	svc := New{{.Pascal}}Service(repo)
+	ctx := context.Background()
+
+	created, err := svc.Create{{.Pascal}}(ctx{{range .Fields}}, {{.Type.GoSample}}{{end}})
+	if err != nil {
+		t.Fatalf("create: unexpected error: %v", err)
+	}
+	if created.ID == ""{{range .Fields}} || {{printf .Mismatch "created"}}{{end}} {
+		t.Fatalf("unexpected {{.Human}}: %+v", created)
+	}
+	if created.CreatedAt.IsZero() || !created.UpdatedAt.Equal(created.CreatedAt) {
+		t.Fatalf("expected both timestamps set to the creation time, got %+v", created)
+	}
+{{if .Op.Get}}
+	got, err := repo.Get(ctx, created.ID)
+	if err != nil {
+		t.Fatalf("get: unexpected error: %v", err)
+	}
+	if got != created {
+		t.Fatalf("expected %+v, got %+v", created, got)
+	}
+{{end}}}
+{{end}}{{if .Op.Get}}
+func Test{{.Pascal}}Service_GetNotFound(t *testing.T) {
+	svc := New{{.Pascal}}Service(memory.New{{.Pascal}}Repository())
+
+	_, err := svc.Get{{.Pascal}}(context.Background(), "does-not-exist")
+	if !errors.Is(err, domain.Err{{.Pascal}}NotFound) {
+		t.Fatalf("expected Err{{.Pascal}}NotFound, got %v", err)
+	}
+}
+{{end}}{{if .Op.List}}
+func Test{{.Pascal}}Service_List(t *testing.T) {
+	repo := memory.New{{.Pascal}}Repository()
+	svc := New{{.Pascal}}Service(repo)
+	seeded := seed{{.Pascal}}(t, repo, "{{.Name}}-1")
+
+	{{.PluralCamel}}, err := svc.List{{.PluralPascal}}(context.Background(), 10, 0)
+	if err != nil {
+		t.Fatalf("list: unexpected error: %v", err)
+	}
+	if len({{.PluralCamel}}) != 1 || {{.PluralCamel}}[0] != seeded {
+		t.Fatalf("expected [%+v], got %+v", seeded, {{.PluralCamel}})
+	}
+}
+{{end}}{{if .Op.Update}}
+func Test{{.Pascal}}Service_Update(t *testing.T) {
+	repo := memory.New{{.Pascal}}Repository()
+	svc := New{{.Pascal}}Service(repo)
+	seeded := seed{{.Pascal}}(t, repo, "{{.Name}}-1")
+
+	updated, err := svc.Update{{.Pascal}}(context.Background(), seeded.ID{{range .Fields}}, {{.Type.GoUpdated}}{{end}})
+	if err != nil {
+		t.Fatalf("update: unexpected error: %v", err)
+	}
+	if updated.ID != seeded.ID{{range .Fields}} || {{printf .MismatchUpdated "updated"}}{{end}} {
+		t.Fatalf("unexpected {{.Human}}: %+v", updated)
+	}
+	if !updated.CreatedAt.Equal(seeded.CreatedAt) || !updated.UpdatedAt.After(seeded.UpdatedAt) {
+		t.Fatalf("expected CreatedAt kept and UpdatedAt advanced, got %+v", updated)
+	}
+}
+
+func Test{{.Pascal}}Service_UpdateNotFound(t *testing.T) {
+	svc := New{{.Pascal}}Service(memory.New{{.Pascal}}Repository())
+
+	_, err := svc.Update{{.Pascal}}(context.Background(), "does-not-exist"{{range .Fields}}, {{.Type.GoUpdated}}{{end}})
+	if !errors.Is(err, domain.Err{{.Pascal}}NotFound) {
+		t.Fatalf("expected Err{{.Pascal}}NotFound, got %v", err)
+	}
+}
+{{end}}{{if .Op.Delete}}
+func Test{{.Pascal}}Service_Delete(t *testing.T) {
+	repo := memory.New{{.Pascal}}Repository()
+	svc := New{{.Pascal}}Service(repo)
+	seeded := seed{{.Pascal}}(t, repo, "{{.Name}}-1")
+	ctx := context.Background()
+
+	if err := svc.Delete{{.Pascal}}(ctx, seeded.ID); err != nil {
+		t.Fatalf("delete: unexpected error: %v", err)
+	}
+	if err := svc.Delete{{.Pascal}}(ctx, seeded.ID); !errors.Is(err, domain.Err{{.Pascal}}NotFound) {
+		t.Fatalf("expected Err{{.Pascal}}NotFound after delete, got %v", err)
+	}
+}
+{{end}}

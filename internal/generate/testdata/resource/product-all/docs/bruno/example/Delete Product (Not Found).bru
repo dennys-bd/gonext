@@ -1,0 +1,25 @@
+meta {
+  name: Delete Product (Not Found)
+  type: http
+  seq: 22
+}
+
+delete {
+  url: {{baseUrl}}/products/does-not-exist
+  body: none
+  auth: none
+}
+
+headers {
+  Cookie: {{exampleSessionCookie}}
+}
+
+assert {
+  res.status: eq 404
+}
+
+tests {
+  test("error detail mentions product not found", function () {
+    expect(res.getBody().detail).to.include("product not found");
+  });
+}
