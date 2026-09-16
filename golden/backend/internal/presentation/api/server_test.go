@@ -29,6 +29,7 @@ func TestNewEcho_RateLimitsPerClient(t *testing.T) {
 	ok := func(c echo.Context) error { return c.NoContent(http.StatusOK) }
 	e.GET("/x", ok)
 	e.GET("/healthz", ok)
+	e.GET("/readyz", ok)
 
 	for i := 0; i < 2; i++ {
 		rec := httptest.NewRecorder()
@@ -56,6 +57,12 @@ func TestNewEcho_RateLimitsPerClient(t *testing.T) {
 		if rec.Code != http.StatusOK {
 			t.Fatalf("/healthz hit %d: expected 200, got %d", i, rec.Code)
 		}
+	}
+
+	rec = httptest.NewRecorder()
+	e.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/readyz", nil))
+	if rec.Code != http.StatusTooManyRequests {
+		t.Errorf("/readyz shares the client's bucket: expected 429, got %d", rec.Code)
 	}
 }
 

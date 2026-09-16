@@ -36,7 +36,7 @@ func NewEcho(logger *slog.Logger, cfg config.Config) (*echo.Echo, error) {
 	e.Use(security.RateLimit(security.RateLimitConfig{
 		RPS:       cfg.RateLimitRPS,
 		Burst:     cfg.RateLimitBurst,
-		SkipPaths: []string{"/healthz", "/readyz"},
+		SkipPaths: []string{"/healthz"},
 	}))
 	return e, nil
 }
