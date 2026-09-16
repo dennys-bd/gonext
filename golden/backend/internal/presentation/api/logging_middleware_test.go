@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/danielgtaylor/huma/v2"
 	"github.com/dennys-bd/gonext/auth"
 	"github.com/labstack/echo/v4"
 )
@@ -20,10 +21,21 @@ func (noopResolver) Resolve(context.Context, string) (auth.Identity, error) {
 	return auth.Identity{}, auth.ErrUnauthenticated
 }
 
+// newTestServer builds a server over a fixed test config, failing the test
+// on the error NewEcho now returns.
+func newTestServer(t *testing.T, logger *slog.Logger) (*echo.Echo, huma.API) {
+	t.Helper()
+	e, humaAPI, err := NewServer(logger, noopResolver{}, ProvideAuthConfig(), testConfig("test", 40))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	return e, humaAPI
+}
+
 func TestServer_RequestID_EchoedFromRequest(t *testing.T) {
 	var buf bytes.Buffer
 	logger := slog.New(slog.NewJSONHandler(&buf, nil))
-	e, humaAPI := NewServer(logger, noopResolver{}, ProvideAuthConfig())
+	e, humaAPI := newTestServer(t, logger)
 	RegisterHealthz(humaAPI, logger)
 
 	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
@@ -40,7 +52,7 @@ func TestServer_RequestID_EchoedFromRequest(t *testing.T) {
 func TestServer_RequestID_GeneratedWhenAbsent(t *testing.T) {
 	var buf bytes.Buffer
 	logger := slog.New(slog.NewJSONHandler(&buf, nil))
-	e, humaAPI := NewServer(logger, noopResolver{}, ProvideAuthConfig())
+	e, humaAPI := newTestServer(t, logger)
 	RegisterHealthz(humaAPI, logger)
 
 	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
@@ -56,7 +68,7 @@ func TestServer_RequestID_GeneratedWhenAbsent(t *testing.T) {
 func TestServer_LoggingMiddleware_LogsRequestLine(t *testing.T) {
 	var buf bytes.Buffer
 	logger := slog.New(slog.NewJSONHandler(&buf, nil))
-	e, humaAPI := NewServer(logger, noopResolver{}, ProvideAuthConfig())
+	e, humaAPI := newTestServer(t, logger)
 	RegisterHealthz(humaAPI, logger)
 
 	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)

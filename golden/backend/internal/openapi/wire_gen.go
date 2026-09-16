@@ -21,7 +21,10 @@ import (
 // config and a *bun.DB that never dials — registration only constructs
 // repositories. Run `gonext generate` after editing the provider list below.
 func Initialize(cfg config.Config, logger *slog.Logger, db *bun.DB) (*Spec, error) {
-	echo := api.NewEcho(logger)
+	echo, err := api.NewEcho(logger, cfg)
+	if err != nil {
+		return nil, err
+	}
 	sessionIssuer := users.ProvideSessionIssuer(db)
 	resolver := users.ProvideResolver(sessionIssuer)
 	authConfig := api.ProvideAuthConfig()

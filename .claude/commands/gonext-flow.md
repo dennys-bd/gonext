@@ -190,15 +190,15 @@ Route build-error resolution by the area touched:
 
 | Area touched | Build-fix agent |
 |---|---|
-| `backend/`, `internal/`, `cmd/`, `auth/` (Go) | `ecc:go-build-resolver` |
+| `backend/`, `internal/`, `cmd/`, `auth/`, `core/` (Go) | `ecc:go-build-resolver` |
 | `frontend/` (Next.js/TS/React) | `ecc:react-build-resolver` |
 | Both | run both, independently, in parallel |
 
 Standard validation commands (from `CLAUDE.md` / `make check`):
 ```sh
-go build ./auth/... ./cmd/... ./dbmigrate/... ./internal/... .
-go vet ./auth/... ./cmd/... ./dbmigrate/... ./internal/... .
-go test -race ./auth/... ./cmd/... ./dbmigrate/... ./internal/... .
+go build ./auth/... ./cmd/... ./core/... ./dbmigrate/... ./internal/... .
+go vet ./auth/... ./cmd/... ./core/... ./dbmigrate/... ./internal/... .
+go test -race ./auth/... ./cmd/... ./core/... ./dbmigrate/... ./internal/... .
 ```
 plus the frontend project's `pnpm typecheck` / `pnpm lint` / `pnpm test` as
 applicable. If `templates/` changed, run `make golden` and confirm
@@ -210,7 +210,7 @@ Never run this in the same context that wrote the code. Route by area:
 
 | Area touched | Reviewer agent(s) |
 |---|---|
-| Go (`backend/`, `internal/`, `cmd/`, `auth/`) | `ecc:go-reviewer` |
+| Go (`backend/`, `internal/`, `cmd/`, `auth/`, `core/`) | `ecc:go-reviewer` |
 | Frontend (Next.js/TS/React) | `ecc:typescript-reviewer` + `ecc:react-reviewer` |
 | Both | run each reviewer independently, in parallel |
 | User-facing flow changed | also run `ecc:e2e-runner` (Playwright) |
@@ -222,7 +222,7 @@ CRITICAL findings required non-trivial changes.
 
 Dispatch `ecc:security-reviewer` against the branch diff (`git diff
 main...HEAD` plus untracked files), scoped to the project's own code:
-Go under `cmd/`, `internal/`, `auth/`, `dbmigrate/`, and whatever the
+Go under `cmd/`, `internal/`, `auth/`, `core/`, `dbmigrate/`, and whatever the
 change scaffolds into `templates/`. It looks for injection, unsafe
 subprocess argv, path handling, secrets, and missing validation at trust
 boundaries. Fix CRITICAL/HIGH findings; re-run to confirm before Stage 7.

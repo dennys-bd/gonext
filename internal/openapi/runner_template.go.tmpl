@@ -53,6 +53,8 @@ func main() {
 		LogLevel:        "info",
 		LogFormat:       "json",
 		ShutdownTimeout: 10 * time.Second,
+		RateLimitRPS:    20,
+		RateLimitBurst:  40,
 	}
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	db := bun.NewDB(sql.OpenDB(offlineConnector{}), pgdialect.New())

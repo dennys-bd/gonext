@@ -42,7 +42,7 @@ func (offlineDriver) Open(string) (driver.Conn, error) { return nil, errOffline 
 
 func render(t *testing.T) []byte {
 	t.Helper()
-	cfg := config.Config{Env: "prod", Port: 8080, LogLevel: "info", LogFormat: "json", ShutdownTimeout: 10 * time.Second}
+	cfg := config.Config{Env: "prod", Port: 8080, LogLevel: "info", LogFormat: "json", ShutdownTimeout: 10 * time.Second, RateLimitRPS: 20, RateLimitBurst: 40}
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	db := bun.NewDB(sql.OpenDB(offlineConnector{}), pgdialect.New())
 

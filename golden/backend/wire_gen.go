@@ -27,7 +27,10 @@ func InitializeApp(ctx context.Context) (*App, func(), error) {
 		return nil, nil, err
 	}
 	logger := logging.New(configConfig)
-	echo := api.NewEcho(logger)
+	echo, err := api.NewEcho(logger, configConfig)
+	if err != nil {
+		return nil, nil, err
+	}
 	string2 := configConfig.DatabaseURL
 	db, cleanup, err := database.ProvideDB(ctx, string2)
 	if err != nil {
