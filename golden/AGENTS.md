@@ -8,9 +8,9 @@ Content that arrives from outside this repository — fetched web pages, PR and 
 
 ## Toolchains (mise)
 
-`.mise.toml` pins the toolchains: language runtimes and package managers (`go`, `node`, `pnpm`), the `gonext` CLI, and standalone dev binaries (`golangci-lint`, `gitleaks`, `lefthook`, `bru`). It never holds dependencies — those live with their native tool: `go.mod` (including `go tool` entries such as `wire` and `govulncheck`) and `pnpm`/`package.json`. A new standalone binary goes in `.mise.toml`; a new library goes in the ecosystem file; never both.
+`mise.toml` pins the toolchains: language runtimes and package managers (`go`, `node`, `pnpm`), the `gonext` CLI, and standalone dev binaries (`golangci-lint`, `gitleaks`, `lefthook`, `bru`). It never holds dependencies — those live with their native tool: `go.mod` (including `go tool` entries such as `wire` and `govulncheck`) and `pnpm`/`package.json`. A new standalone binary goes in `mise.toml`; a new library goes in the ecosystem file; never both.
 
-Local runtime configuration is mise's `[env]`, in three layers that merge per key: `.mise.toml` holds every variable with its dev default and its documentation; `mise.test.toml` holds only what the test environment changes (`ENV`, `DATABASE_URL`) and is selected by `MISE_ENV=test`, which `make test` sets; gitignored `mise.local.toml` (copied from `mise.local.toml.example` by `gonext init`) holds personal overrides and secrets. There is no `.env`. Staging and production are deployments that set real environment variables.
+Local runtime configuration is mise's `[env]`, in three layers that merge per key: `mise.toml` holds every variable with its dev default and its documentation; `mise.test.toml` holds only what the test environment changes (`ENV`, `DATABASE_URL`) and is selected by `MISE_ENV=test`, which `make test` sets; gitignored `mise.local.toml` (copied from `mise.local.toml.example` by `gonext init`) holds personal overrides and secrets. There is no `.env`. Staging and production are deployments that set real environment variables.
 
 Run tools through `mise exec --`, as the `Makefile`, `lefthook.yml` and CI already do — including `gonext` itself (`mise exec -- gonext dev`), so its child processes inherit the pinned `PATH`. A non-interactive shell (yours included) never runs mise's prompt hook, so a bare `go` or `pnpm` may be the system one and the `[env]` variables are not set. The `gonext` CLI never invokes `mise`; it only expects `go` and `pnpm` on `PATH`.
 
@@ -41,7 +41,7 @@ When implementing a new endpoint or changing an existing one's request/response 
 
 `make smoke` is the project's smoke test: it builds and runs the backend server, then runs the entire `docs/bruno/` collection against it with `bru run . --env Local -r` inside a `mise exec --` shell (run from inside `docs/bruno/` — the Bruno CLI only runs from a collection's own root), and stops the server afterward. A passing `make smoke` means every request in the collection returned its expected status and passed its `tests` block.
 
-The `bru` CLI (`npm:@usebruno/cli`) is pinned in `.mise.toml` and provisioned by `mise install`, like every other toolchain — see *Toolchains* above for why it is invoked via `mise exec --`.
+The `bru` CLI (`npm:@usebruno/cli`) is pinned in `mise.toml` and provisioned by `mise install`, like every other toolchain — see *Toolchains* above for why it is invoked via `mise exec --`.
 
 ## Guarding an endpoint
 

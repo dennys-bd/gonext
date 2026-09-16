@@ -18,7 +18,7 @@ gonext init my-app
 cd my-app && mise install && make db-up && make migrate && make hooks-install
 ```
 
-`.mise.toml` in the generated project pins the exact toolchain versions and holds the dev configuration as `[env]`; `mise.test.toml` and a gitignored `mise.local.toml` layer the test environment and your personal overrides on top — there is no `.env`. The `gonext` CLI itself never invokes `mise` — it only needs `go` and `pnpm` on `PATH`.
+`mise.toml` in the generated project pins the exact toolchain versions and holds the dev configuration as `[env]`; `mise.test.toml` and a gitignored `mise.local.toml` layer the test environment and your personal overrides on top — there is no `.env`. The `gonext` CLI itself never invokes `mise` — it only needs `go` and `pnpm` on `PATH`.
 
 ---
 

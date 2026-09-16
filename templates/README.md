@@ -52,13 +52,13 @@ Two things on the host: [**`mise`**](https://mise.jdx.dev/) and Docker.
 
 `mise` owns the toolchains — language runtimes and package managers (`go`,
 `node`, `pnpm`), the `gonext` CLI, and standalone dev binaries
-(`golangci-lint`, `gitleaks`, `lefthook`, `bru`) — pinned in `.mise.toml`.
+(`golangci-lint`, `gitleaks`, `lefthook`, `bru`) — pinned in `mise.toml`.
 Dependencies stay with their native tool: `go.mod` (including `go tool`
 entries such as `wire` and `govulncheck`) and `pnpm`. Add a new standalone
-binary to `.mise.toml`; add a library to the ecosystem file; never both.
+binary to `mise.toml`; add a library to the ecosystem file; never both.
 
 `mise` also owns local runtime configuration, as `[env]` in three layers
-that merge per key: `.mise.toml` (every variable, its dev default and its
+that merge per key: `mise.toml` (every variable, its dev default and its
 documentation), `mise.test.toml` (what the test environment changes;
 `make test` selects it with `MISE_ENV=test`) and gitignored
 `mise.local.toml` (personal overrides and secrets, copied from

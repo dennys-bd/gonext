@@ -1,5 +1,5 @@
 # Every toolchain command runs through `mise exec --` so the pinned tools and
-# the [env] from .mise.toml apply even where mise's shell hook never fires: an
+# the [env] from mise.toml apply even where mise's shell hook never fires: an
 # agent's shell, a git hook run by an IDE, CI. Docker is a host prerequisite,
 # not a mise tool, so `docker compose` runs bare. See AGENTS.md "Toolchains".
 .PHONY: run build test vet tidy migrate openapi openapi-check smoke lint vulncheck db-up db-down frontend-dev frontend-build frontend-test frontend-lint frontend-typecheck frontend-audit secrets-scan hooks-install

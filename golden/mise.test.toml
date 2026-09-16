@@ -1,4 +1,4 @@
-# The test environment: loaded on top of .mise.toml when MISE_ENV=test,
+# The test environment: loaded on top of mise.toml when MISE_ENV=test,
 # which `make test` sets. Only what differs from dev belongs here.
 [env]
 ENV = "test"
