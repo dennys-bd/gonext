@@ -18,7 +18,7 @@ pre-commit:
       run: make vulncheck
     go-generate-check:
       glob: "*.go"
-      run: gonext generate --check
+      run: mise exec -- gonext generate --check
     frontend-lint:
       glob: "frontend/**/*.{ts,tsx,js,jsx}"
       run: make frontend-lint

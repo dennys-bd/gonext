@@ -1,0 +1,56 @@
+# Toolchains only: runtimes, package managers and standalone dev binaries
+# that no ecosystem's dependency file can pin. Libraries and Go tools that
+# build inside the module (wire, govulncheck) belong in go.mod / package.json.
+[tools]
+go = "1.26.7"
+node = "24.19.0"
+pnpm = "11.24.0"
+"npm:@usebruno/cli" = "4.0.0"
+lefthook = "2.1.11"
+gitleaks = "8.30.1"
+"go:github.com/golangci/golangci-lint/v2/cmd/golangci-lint" = "2.6.0"
+
+# Backend runtime configuration for local development, and its documented
+# schema. mise puts these in the environment of every activated shell and
+# every `mise exec --` command; the server binary and gonext's subcommands
+# read real environment variables and nothing else. Layers merge per key:
+#   mise.test.toml   the test environment, selected by MISE_ENV=test (`make test`)
+#   mise.local.toml  personal overrides and secrets, gitignored (see .example)
+# Staging and production are deployments that set real variables — no file.
+[env]
+# Deployment environment: dev, test, stg, prod. The binary defaults to prod,
+# so a deployment that forgets to set it gets the safe behaviour. Outside
+# prod the users domain returns raw confirmation/reset tokens in its
+# responses and lets unconfirmed accounts log in, so local development
+# works without a mail server.
+ENV = "dev"
+
+# HTTP port the server listens on.
+PORT = "8080"
+
+# Minimum log level: debug, info, warn, error.
+LOG_LEVEL = "info"
+
+# Log output format: json, pretty.
+LOG_FORMAT = "pretty"
+
+# Max time to wait for in-flight requests to drain on shutdown
+# (Go duration syntax, e.g. 10s, 1m).
+SHUTDOWN_TIMEOUT = "10s"
+
+# Sustained requests per second one client IP may make, and how many it
+# may make at once before that rate applies. In-process: each replica
+# allows the full amount on its own.
+RATE_LIMIT_RPS = "20"
+RATE_LIMIT_BURST = "40"
+
+# Comma-separated CIDRs of the proxies in front of the server. Empty
+# means the TCP peer is the client and X-Forwarded-For is ignored. Set
+# it behind a load balancer, or every request shares the balancer's
+# rate-limit bucket. A catch-all such as 0.0.0.0/0 is refused at
+# startup: it would let every client choose its own address.
+TRUSTED_PROXIES = ""
+
+# Postgres connection string for the running server. Matches the
+# credentials docker-compose.yml's `db` service creates.
+DATABASE_URL = "postgres://app:app@localhost:5432/app?sslmode=disable"

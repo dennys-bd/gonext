@@ -1,0 +1,9 @@
+# The test environment: loaded on top of mise.toml when MISE_ENV=test,
+# which `make test` sets. Only what differs from dev belongs here.
+[env]
+ENV = "test"
+
+# The database `make test` migrates and runs the backend suite against.
+# dbtest refuses to run outside ENV=test, so a bare `go test` in a dev
+# shell skips these tests instead of touching the dev database.
+DATABASE_URL = "postgres://app:app@localhost:5432/app_test?sslmode=disable"

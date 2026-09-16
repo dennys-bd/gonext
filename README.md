@@ -6,6 +6,22 @@ This document is the **vision**: philosophy, architecture, and the full catalog 
 
 ---
 
+## Getting Started
+
+Host prerequisites are [`mise`](https://mise.jdx.dev/) and Docker; `mise` installs every other toolchain a project needs. Until `gonext` is published under an installable path (tracked in [#91](https://github.com/dennys-bd/gonext/issues/91)), build it from this repo:
+
+```bash
+brew install mise                       # see mise.jdx.dev for other platforms
+mise use -g go node pnpm                # go + pnpm on PATH: what `gonext init` needs
+git clone https://github.com/dennys-bd/gonext && make -C gonext install   # ~/go/bin/gonext
+gonext init my-app
+cd my-app && mise install && make db-up && make migrate && make hooks-install
+```
+
+`mise.toml` in the generated project pins the exact toolchain versions and holds the dev configuration as `[env]`; `mise.test.toml` and a gitignored `mise.local.toml` layer the test environment and your personal overrides on top — there is no `.env`. The `gonext` CLI itself never invokes `mise` — it only needs `go` and `pnpm` on `PATH`.
+
+---
+
 ## Vision & Core Philosophy
 
 1. **AI-First**:
@@ -239,7 +255,7 @@ flowchart TD
 * **`testcontainers-go`**: Ephemeral PostgreSQL containers spin up on demand during `go test`, eliminating manual mock maintenance.
 
 ### 3. Agent Context & Instruction Guardrails (`AGENTS.md` / `CLAUDE.md`)
-* **Toolchain Pinning via `mise`**: Guarantees identical binaries (`go`, `pnpm`, `golangci-lint`, `goose`, `bru`) across human and agent environments.
+* **Toolchain Pinning via `mise`**: Guarantees identical binaries (`go`, `pnpm`, `golangci-lint`, `bru`, `gonext` itself) across human and agent environments, and carries the local configuration as `[env]` layers so both see the same variables. Dependencies stay with `go.mod` and `pnpm`; the `gonext` CLI never depends on `mise`.
 * **Architectural Boundaries**: Strict rules forbidding cross-domain leaks, circular imports, and unvalidated payload mutations — verified by `gonext doctor` / `make check`, so a deviation fails the loop instead of surviving as "works but ugly".
 * **Per-Domain Knowledge Bundles**: Each domain ships a compact, self-contained manual in [Open Knowledge Format](https://cloud.google.com/blog/products/data-analytics/how-the-open-knowledge-format-can-improve-data-sharing) — what it owns, its layer rules, its public surface, the contract operations it implements, the generator to use, how to test it, and the invariants the code alone does not reveal. Emitted by the generators, validated like `AGENTS.md`, complementary to the Graphify AST graph (Pack H): the graph derives structure, the bundle records intent.
 

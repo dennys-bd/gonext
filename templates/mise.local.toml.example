@@ -1,0 +1,11 @@
+# Personal overrides and secrets. `gonext init` copies this file to
+# mise.local.toml, which is gitignored and loaded last, on top of
+# mise.toml and mise.<MISE_ENV>.toml. Set only the keys that differ
+# on your machine; everything else keeps its committed value.
+#
+# Keys a developer is expected to fill in locally are listed here with an
+# empty value, so a new machine knows what it needs. Today nothing is
+# required: every variable has a working default in mise.toml.
+[env]
+# LOG_LEVEL = "debug"
+# DATABASE_URL = "postgres://app:app@localhost:5433/app?sslmode=disable"

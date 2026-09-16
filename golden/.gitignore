@@ -41,8 +41,8 @@ go.work.sum
 /backend/gonext_migrate_runner.go
 /backend/gonext_openapi_runner.go
 
-# env file
-.env
+# personal mise overrides and secrets (copied from mise.local.toml.example)
+mise.local.toml
 
 # Editor/IDE
 # .idea/

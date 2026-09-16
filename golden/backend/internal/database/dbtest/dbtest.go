@@ -7,7 +7,9 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"net/url"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/uptrace/bun"
@@ -15,18 +17,34 @@ import (
 	"golden-app/backend/internal/database"
 )
 
-// New opens an outer transaction against TEST_DATABASE_URL, returned as a
-// bun.IDB plus a Transactor built on it via SAVEPOINTs; both are rolled
-// back automatically via t.Cleanup. It skips t if TEST_DATABASE_URL is unset.
+// DSN returns DATABASE_URL for a test that needs a real Postgres. It skips
+// t unless ENV is test, so a bare `go test` in a dev shell never touches the
+// dev database, and fails t if the database name does not end in _test.
+func DSN(t *testing.T) string {
+	t.Helper()
+
+	if os.Getenv("ENV") != "test" {
+		t.Skip("ENV is not test; run `make test` (it selects mise.test.toml) to run this test")
+	}
+	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		t.Skip("DATABASE_URL not set; run `make test` to run this test")
+	}
+	// A DATABASE_URL override in mise.local.toml wins over mise.test.toml
+	// too, so ENV alone cannot prove this is not someone's dev database.
+	if u, err := url.Parse(dsn); err != nil || !strings.HasSuffix(u.Path, "_test") {
+		t.Fatalf("DATABASE_URL must name a database ending in _test under ENV=test, got %q", dsn)
+	}
+	return dsn
+}
+
+// New opens an outer transaction against DSN(t), returned as a bun.IDB
+// plus a Transactor built on it via SAVEPOINTs; both are rolled back
+// automatically via t.Cleanup.
 func New(t *testing.T) (bun.IDB, database.Transactor) {
 	t.Helper()
 
-	dsn := os.Getenv("TEST_DATABASE_URL")
-	if dsn == "" {
-		t.Skip("TEST_DATABASE_URL not set; run `make db-up` and `gonext migrate` against it to run this test")
-	}
-
-	db, err := database.Connect(context.Background(), dsn)
+	db, err := database.Connect(context.Background(), DSN(t))
 	if err != nil {
 		t.Fatalf("connecting to test database: %v", err)
 	}

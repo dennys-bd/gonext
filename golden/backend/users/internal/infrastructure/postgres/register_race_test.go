@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"sync"
 	"testing"
 	"time"
 
 	"golden-app/backend/internal/database"
+	"golden-app/backend/internal/database/dbtest"
 	"golden-app/backend/users/domain"
 	"golden-app/backend/users/internal/application"
 	"golden-app/backend/users/internal/infrastructure/memory"
@@ -22,13 +22,8 @@ import (
 func TestRegister_ConcurrentSameEmail_Postgres(t *testing.T) {
 	const racers = 8
 
-	dsn := os.Getenv("TEST_DATABASE_URL")
-	if dsn == "" {
-		t.Skip("TEST_DATABASE_URL not set; run `make db-up` and `gonext migrate` against it to run this test")
-	}
-
 	ctx := context.Background()
-	db, err := database.Connect(ctx, dsn)
+	db, err := database.Connect(ctx, dbtest.DSN(t))
 	if err != nil {
 		t.Fatalf("connecting to test database: %v", err)
 	}

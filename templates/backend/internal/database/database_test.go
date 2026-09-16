@@ -1,18 +1,15 @@
-package database
+package database_test
 
 import (
 	"context"
-	"os"
 	"testing"
+
+	"[PROJECT-NAME]/backend/internal/database"
+	"[PROJECT-NAME]/backend/internal/database/dbtest"
 )
 
 func TestConnect_Success(t *testing.T) {
-	dsn := os.Getenv("TEST_DATABASE_URL")
-	if dsn == "" {
-		t.Skip("TEST_DATABASE_URL not set; run `make db-up` and export it to run this test")
-	}
-
-	db, err := Connect(context.Background(), dsn)
+	db, err := database.Connect(context.Background(), dbtest.DSN(t))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -24,7 +21,7 @@ func TestConnect_Success(t *testing.T) {
 }
 
 func TestConnect_InvalidDSN(t *testing.T) {
-	_, err := Connect(context.Background(), "not-a-valid-dsn")
+	_, err := database.Connect(context.Background(), "not-a-valid-dsn")
 	if err == nil {
 		t.Fatal("expected an error, got nil")
 	}
