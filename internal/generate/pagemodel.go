@@ -118,7 +118,7 @@ func buildPageModel(doc *openapi.Document, op *openapi.Operation, r parsedRoute)
 		Tag:           tagOf(op),
 		IsGet:         op.Method == "GET",
 	}
-	m.CallName = "api." + m.Tag + "." + camelCase(op.OperationID)
+	m.CallName = callName(op)
 	m.Title = op.Summary
 	if m.Title == "" {
 		m.Title = humanize(op.OperationID)
@@ -262,6 +262,10 @@ func checkBodyContentType(op *openapi.Operation) error {
 		return fmt.Errorf("unsupported: operation %q has no application/json request body", op.OperationID)
 	}
 	return nil
+}
+
+func callName(op *openapi.Operation) string {
+	return "api." + tagOf(op) + "." + camelCase(op.OperationID)
 }
 
 func tagOf(op *openapi.Operation) string {

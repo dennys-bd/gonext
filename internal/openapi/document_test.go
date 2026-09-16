@@ -87,6 +87,35 @@ func TestLoad_MissingDocument(t *testing.T) {
 	}
 }
 
+func TestOperations_Order(t *testing.T) {
+	root := testdataFixture(t)
+	doc, err := Load(root)
+	if err != nil {
+		t.Fatalf("Load: unexpected error: %v", err)
+	}
+
+	ops := doc.Operations()
+	if len(ops) != 17 {
+		t.Fatalf("Operations: got %d operations, want 17", len(ops))
+	}
+	for i, op := range ops {
+		if op.Method == "" || op.Path == "" {
+			t.Errorf("Operations[%d]: Method/Path not filled: %+v", i, op)
+		}
+		if i > 0 && ops[i-1].Path > op.Path {
+			t.Errorf("Operations not sorted by path: %q before %q", ops[i-1].Path, op.Path)
+		}
+	}
+	// /healthz declares both GET and HEAD; GET must sort first per the
+	// fixed method order.
+	if ops[0].Path != "/healthz" || ops[0].Method != "GET" || ops[0].OperationID != "healthz" {
+		t.Errorf("Operations[0] = %+v, want GET /healthz (healthz)", ops[0])
+	}
+	if ops[1].Path != "/healthz" || ops[1].Method != "HEAD" || ops[1].OperationID != "head-healthz" {
+		t.Errorf("Operations[1] = %+v, want HEAD /healthz (head-healthz)", ops[1])
+	}
+}
+
 func TestOperation_Unknown(t *testing.T) {
 	root := testdataFixture(t)
 	doc, err := Load(root)

@@ -15,7 +15,7 @@ import (
 
 const generateMigrationUsage = "usage: gonext generate migration <domain> <name>"
 
-const generatePageUsage = "usage: gonext generate page <route> <operationId>"
+const generatePageUsage = "usage: gonext generate page <route> <operationId>  (see gonext routes)"
 
 const generateResourceUsage = "usage: gonext generate resource <domain> <name> [<field>:<type>…] [--ops create,get,list,update,delete] [--auth all|mutations|public] [--plural <word>]"
 
