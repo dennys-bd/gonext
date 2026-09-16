@@ -1,0 +1,28 @@
+meta {
+  name: Get Product
+  type: http
+  seq: 17
+}
+
+get {
+  url: {{baseUrl}}/products/{{productId}}
+  body: none
+  auth: none
+}
+
+headers {
+  Cookie: {{exampleSessionCookie}}
+}
+
+assert {
+  res.status: eq 200
+}
+
+tests {
+  test("returns the product created by Create Product", function () {
+    const body = res.getBody();
+    expect(body.id).to.equal(bru.getVar("productId"));
+    expect(body.title).to.equal("demo");
+    expect(body.price).to.equal(42);
+  });
+}

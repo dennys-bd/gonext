@@ -1,0 +1,28 @@
+meta {
+  name: Update Product (No Session)
+  type: http
+  seq: 7
+}
+
+put {
+  url: {{baseUrl}}/products/does-not-exist
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "title": "demo-updated",
+    "price": 43
+  }
+}
+
+assert {
+  res.status: eq 401
+}
+
+tests {
+  test("rejects the request with no session", function () {
+    expect(res.getBody().detail).to.be.a("string").and.not.empty;
+  });
+}

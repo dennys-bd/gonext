@@ -1,0 +1,32 @@
+meta {
+  name: Update Product (Not Found)
+  type: http
+  seq: 21
+}
+
+put {
+  url: {{baseUrl}}/products/does-not-exist
+  body: json
+  auth: none
+}
+
+headers {
+  Cookie: {{exampleSessionCookie}}
+}
+
+body:json {
+  {
+    "title": "demo-updated",
+    "price": 43
+  }
+}
+
+assert {
+  res.status: eq 404
+}
+
+tests {
+  test("error detail mentions product not found", function () {
+    expect(res.getBody().detail).to.include("product not found");
+  });
+}

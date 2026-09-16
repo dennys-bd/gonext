@@ -1,0 +1,27 @@
+meta {
+  name: List Products
+  type: http
+  seq: 19
+}
+
+get {
+  url: {{baseUrl}}/products
+  body: none
+  auth: none
+}
+
+headers {
+  Cookie: {{exampleSessionCookie}}
+}
+
+assert {
+  res.status: eq 200
+}
+
+tests {
+  test("lists the product created by Create Product", function () {
+    const items = res.getBody().items;
+    expect(items).to.be.an("array");
+    expect(items.map((item) => item.id)).to.include(bru.getVar("productId"));
+  });
+}

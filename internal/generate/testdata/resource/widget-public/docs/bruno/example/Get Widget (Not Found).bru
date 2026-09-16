@@ -1,0 +1,21 @@
+meta {
+  name: Get Widget (Not Found)
+  type: http
+  seq: 13
+}
+
+get {
+  url: {{baseUrl}}/widgets/does-not-exist
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 404
+}
+
+tests {
+  test("error detail mentions widget not found", function () {
+    expect(res.getBody().detail).to.include("widget not found");
+  });
+}

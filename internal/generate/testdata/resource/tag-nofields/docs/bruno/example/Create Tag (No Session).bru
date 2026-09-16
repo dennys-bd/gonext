@@ -1,0 +1,25 @@
+meta {
+  name: Create Tag (No Session)
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/tags
+  body: json
+  auth: none
+}
+
+body:json {
+  {}
+}
+
+assert {
+  res.status: eq 401
+}
+
+tests {
+  test("rejects the request with no session", function () {
+    expect(res.getBody().detail).to.be.a("string").and.not.empty;
+  });
+}

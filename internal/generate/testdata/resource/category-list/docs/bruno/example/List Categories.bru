@@ -1,0 +1,21 @@
+meta {
+  name: List Categories
+  type: http
+  seq: 10
+}
+
+get {
+  url: {{baseUrl}}/categories
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}
+
+tests {
+  test("returns an items array", function () {
+    expect(res.getBody().items).to.be.an("array");
+  });
+}

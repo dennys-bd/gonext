@@ -1,0 +1,21 @@
+meta {
+  name: Delete Product (No Session)
+  type: http
+  seq: 8
+}
+
+delete {
+  url: {{baseUrl}}/products/does-not-exist
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 401
+}
+
+tests {
+  test("rejects the request with no session", function () {
+    expect(res.getBody().detail).to.be.a("string").and.not.empty;
+  });
+}

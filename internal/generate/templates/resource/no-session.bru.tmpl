@@ -1,0 +1,47 @@
+meta {
+  name: [[.Request]]
+  type: http
+  seq: [[.Seq]]
+}
+
+[[if eq .Operation "create"]]post {
+  url: {{baseUrl}}[[.Route]]
+  body: json
+  auth: none
+}
+
+body:json {
+[[template "body" .Fields]]}
+[[else if eq .Operation "get"]]get {
+  url: {{baseUrl}}[[.Route]]/does-not-exist
+  body: none
+  auth: none
+}
+[[else if eq .Operation "list"]]get {
+  url: {{baseUrl}}[[.Route]]
+  body: none
+  auth: none
+}
+[[else if eq .Operation "update"]]put {
+  url: {{baseUrl}}[[.Route]]/does-not-exist
+  body: json
+  auth: none
+}
+
+body:json {
+[[template "updated-body" .Fields]]}
+[[else]]delete {
+  url: {{baseUrl}}[[.Route]]/does-not-exist
+  body: none
+  auth: none
+}
+[[end]]
+assert {
+  res.status: eq 401
+}
+
+tests {
+  test("rejects the request with no session", function () {
+    expect(res.getBody().detail).to.be.a("string").and.not.empty;
+  });
+}

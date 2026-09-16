@@ -1,0 +1,29 @@
+meta {
+  name: Update Tag (Not Found)
+  type: http
+  seq: 14
+}
+
+put {
+  url: {{baseUrl}}/tags/does-not-exist
+  body: json
+  auth: none
+}
+
+headers {
+  Cookie: {{exampleSessionCookie}}
+}
+
+body:json {
+  {}
+}
+
+assert {
+  res.status: eq 404
+}
+
+tests {
+  test("error detail mentions tag not found", function () {
+    expect(res.getBody().detail).to.include("tag not found");
+  });
+}

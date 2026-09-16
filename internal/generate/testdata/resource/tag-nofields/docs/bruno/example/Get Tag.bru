@@ -1,0 +1,26 @@
+meta {
+  name: Get Tag
+  type: http
+  seq: 10
+}
+
+get {
+  url: {{baseUrl}}/tags/{{tagId}}
+  body: none
+  auth: none
+}
+
+headers {
+  Cookie: {{exampleSessionCookie}}
+}
+
+assert {
+  res.status: eq 200
+}
+
+tests {
+  test("returns the tag created by Create Tag", function () {
+    const body = res.getBody();
+    expect(body.id).to.equal(bru.getVar("tagId"));
+  });
+}

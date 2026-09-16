@@ -1,0 +1,28 @@
+meta {
+  name: Get Widget
+  type: http
+  seq: 12
+}
+
+get {
+  url: {{baseUrl}}/widgets/{{widgetId}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}
+
+tests {
+  test("returns the widget created by Create Widget", function () {
+    const body = res.getBody();
+    expect(body.id).to.equal(bru.getVar("widgetId"));
+    expect(body.name).to.equal("demo");
+    expect(body.count).to.equal(42);
+    expect(body.total).to.equal(42);
+    expect(body.ratio).to.equal(9.5);
+    expect(body.active).to.equal(true);
+    expect(Date.parse(body.due)).to.equal(Date.parse("2026-01-02T03:04:05Z"));
+  });
+}

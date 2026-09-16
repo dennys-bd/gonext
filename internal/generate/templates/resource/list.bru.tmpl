@@ -1,0 +1,30 @@
+meta {
+  name: [[.Request]]
+  type: http
+  seq: [[.Seq]]
+}
+
+get {
+  url: {{baseUrl}}[[.Route]]
+  body: none
+  auth: none
+}
+[[if .Secured.List]]
+headers {
+  Cookie: {{[[.SessionVar]]}}
+}
+[[end]]
+assert {
+  res.status: eq 200
+}
+
+tests {
+[[if .Op.Create]]  test("lists the [[.Human]] created by Create [[.Title]]", function () {
+    const items = res.getBody().items;
+    expect(items).to.be.an("array");
+    expect(items.map((item) => item.id)).to.include(bru.getVar("[[.IDVar]]"));
+  });
+[[else]]  test("returns an items array", function () {
+    expect(res.getBody().items).to.be.an("array");
+  });
+[[end]]}

@@ -1,0 +1,36 @@
+meta {
+  name: [[.Request]]
+  type: http
+  seq: [[.Seq]]
+}
+
+post {
+  url: {{baseUrl}}/users/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "{{[[.DomainCamel]]Email}}",
+    "password": "{{[[.DomainCamel]]Password}}"
+  }
+}
+
+assert {
+  res.status: eq 200
+}
+
+tests {
+  test("returns the account the [[.Human]] requests will act as", function () {
+    expect(res.getBody().email).to.equal(bru.getVar("[[.DomainCamel]]Email"));
+  });
+}
+
+script:post-response {
+  if (res.status === 200) {
+    const raw = res.getHeader("set-cookie");
+    const header = Array.isArray(raw) ? raw[0] : raw;
+    bru.setVar("[[.SessionVar]]", header.split(";")[0]);
+  }
+}

@@ -1,0 +1,19 @@
+meta {
+  name: Delete Tag
+  type: http
+  seq: 16
+}
+
+delete {
+  url: {{baseUrl}}/tags/{{tagId}}
+  body: none
+  auth: none
+}
+
+headers {
+  Cookie: {{exampleSessionCookie}}
+}
+
+assert {
+  res.status: eq 204
+}

@@ -1,0 +1,19 @@
+meta {
+  name: [[.Request]]
+  type: http
+  seq: [[.Seq]]
+}
+
+delete {
+  url: {{baseUrl}}[[.Route]]/{{[[.IDVar]]}}
+  body: none
+  auth: none
+}
+[[if .Secured.Delete]]
+headers {
+  Cookie: {{[[.SessionVar]]}}
+}
+[[end]]
+assert {
+  res.status: eq 204
+}

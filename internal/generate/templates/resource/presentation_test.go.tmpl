@@ -1,0 +1,197 @@
+{{- $seed := or .Op.Get .Op.List .Op.Update .Op.Delete -}}
+package presentation
+
+import (
+	"context"
+	"io"
+	"log/slog"
+	"net/http"
+	"testing"
+{{if $seed}}	"time"
+{{end}}
+	"github.com/danielgtaylor/huma/v2/humatest"
+	"github.com/dennys-bd/gonext/auth"
+
+{{if $seed}}	"{{.Module}}/backend/{{.Domain}}/domain"
+{{end}}	"{{.Module}}/backend/{{.Domain}}/internal/application"
+	"{{.Module}}/backend/{{.Domain}}/internal/infrastructure/memory"
+	apipkg "{{.Module}}/backend/internal/presentation/api"
+)
+
+// {{.Camel}}RejectingResolver stands in for a provider with no valid sessions.
+type {{.Camel}}RejectingResolver struct{}
+
+func ({{.Camel}}RejectingResolver) Resolve(context.Context, string) (auth.Identity, error) {
+	return auth.Identity{}, auth.ErrUnauthenticated
+}
+{{if .AnySecured}}
+// {{.Camel}}AcceptingResolver treats any credential as a valid session.
+type {{.Camel}}AcceptingResolver struct{}
+
+func ({{.Camel}}AcceptingResolver) Resolve(context.Context, string) (auth.Identity, error) {
+	return auth.Identity{UserID: "u-1"}, nil
+}
+
+// {{.Camel}}Session is the header a secured request sends; the accepting
+// resolver never looks at its value.
+const {{.Camel}}Session = "Cookie: " + auth.DefaultCookieName + "=x"
+{{end}}
+func new{{.Pascal}}TestAPI(t *testing.T, resolver auth.Resolver) (humatest.TestAPI, *memory.{{.Pascal}}Repository) {
+	t.Helper()
+
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	_, api := humatest.New(t)
+	api.UseMiddleware(apipkg.NewAuthMiddleware(api, resolver, apipkg.ProvideAuthConfig(), logger))
+
+	repo := memory.New{{.Pascal}}Repository()
+	Register{{.Pascal}}(api, application.New{{.Pascal}}Service(repo), logger)
+	return api, repo
+}
+{{if $seed}}
+// seed{{.Pascal}} stores a {{.Human}} through the repository, not the API, so
+// the read and write cases do not depend on the create endpoint.
+func seed{{.Pascal}}(t *testing.T, repo *memory.{{.Pascal}}Repository) domain.{{.Pascal}} {
+	t.Helper()
+	at := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	{{.Camel}} := domain.{{.Pascal}}{
+		ID: "{{.Name}}-1",
+{{range .Fields}}		{{.Pascal}}: {{.Type.GoSample}},
+{{end}}		CreatedAt: at,
+		UpdatedAt: at,
+	}
+	if err := repo.Create(context.Background(), {{.Camel}}); err != nil {
+		t.Fatalf("seeding a {{.Human}}: %v", err)
+	}
+	return {{.Camel}}
+}
+{{end}}{{if .Op.Create}}{{if .Secured.Create}}
+func TestCreate{{.Pascal}}_RequiresASession(t *testing.T) {
+	api, _ := new{{.Pascal}}TestAPI(t, {{.Camel}}RejectingResolver{})
+
+	resp := api.Post("{{.Route}}", map[string]any{ {{.BodySample}}})
+	if resp.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 without a session, got %d: %s", resp.Code, resp.Body.String())
+	}
+}
+{{end}}
+func TestCreate{{.Pascal}}(t *testing.T) {
+	api, _ := new{{.Pascal}}TestAPI(t, {{if .Secured.Create}}{{.Camel}}AcceptingResolver{{else}}{{.Camel}}RejectingResolver{{end}}{})
+
+	resp := api.Post("{{.Route}}", {{if .Secured.Create}}{{.Camel}}Session, {{end}}map[string]any{ {{.BodySample}}})
+	if resp.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", resp.Code, resp.Body.String())
+	}
+}
+{{if .HasFields}}
+func TestCreate{{.Pascal}}_MissingField(t *testing.T) {
+	api, _ := new{{.Pascal}}TestAPI(t, {{if .Secured.Create}}{{.Camel}}AcceptingResolver{{else}}{{.Camel}}RejectingResolver{{end}}{})
+
+	resp := api.Post("{{.Route}}", {{if .Secured.Create}}{{.Camel}}Session, {{end}}map[string]any{})
+	if resp.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("expected 422, got %d: %s", resp.Code, resp.Body.String())
+	}
+}
+{{end}}{{end}}{{if .Op.Get}}{{if .Secured.Get}}
+func TestGet{{.Pascal}}_RequiresASession(t *testing.T) {
+	api, _ := new{{.Pascal}}TestAPI(t, {{.Camel}}RejectingResolver{})
+
+	resp := api.Get("{{.Route}}/does-not-exist")
+	if resp.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 without a session, got %d: %s", resp.Code, resp.Body.String())
+	}
+}
+{{end}}
+func TestGet{{.Pascal}}(t *testing.T) {
+	api, repo := new{{.Pascal}}TestAPI(t, {{if .Secured.Get}}{{.Camel}}AcceptingResolver{{else}}{{.Camel}}RejectingResolver{{end}}{})
+	{{.Camel}} := seed{{.Pascal}}(t, repo)
+
+	resp := api.Get("{{.Route}}/"+{{.Camel}}.ID{{if .Secured.Get}}, {{.Camel}}Session{{end}})
+	if resp.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", resp.Code, resp.Body.String())
+	}
+}
+
+func TestGet{{.Pascal}}_NotFound(t *testing.T) {
+	api, _ := new{{.Pascal}}TestAPI(t, {{if .Secured.Get}}{{.Camel}}AcceptingResolver{{else}}{{.Camel}}RejectingResolver{{end}}{})
+
+	resp := api.Get("{{.Route}}/does-not-exist"{{if .Secured.Get}}, {{.Camel}}Session{{end}})
+	if resp.Code != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d: %s", resp.Code, resp.Body.String())
+	}
+}
+{{end}}{{if .Op.List}}{{if .Secured.List}}
+func TestList{{.PluralPascal}}_RequiresASession(t *testing.T) {
+	api, _ := new{{.Pascal}}TestAPI(t, {{.Camel}}RejectingResolver{})
+
+	resp := api.Get("{{.Route}}")
+	if resp.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 without a session, got %d: %s", resp.Code, resp.Body.String())
+	}
+}
+{{end}}
+func TestList{{.PluralPascal}}(t *testing.T) {
+	api, repo := new{{.Pascal}}TestAPI(t, {{if .Secured.List}}{{.Camel}}AcceptingResolver{{else}}{{.Camel}}RejectingResolver{{end}}{})
+	seed{{.Pascal}}(t, repo)
+
+	resp := api.Get("{{.Route}}"{{if .Secured.List}}, {{.Camel}}Session{{end}})
+	if resp.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", resp.Code, resp.Body.String())
+	}
+}
+{{end}}{{if .Op.Update}}{{if .Secured.Update}}
+func TestUpdate{{.Pascal}}_RequiresASession(t *testing.T) {
+	api, _ := new{{.Pascal}}TestAPI(t, {{.Camel}}RejectingResolver{})
+
+	resp := api.Put("{{.Route}}/does-not-exist", map[string]any{ {{.BodyUpdated}}})
+	if resp.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 without a session, got %d: %s", resp.Code, resp.Body.String())
+	}
+}
+{{end}}
+func TestUpdate{{.Pascal}}(t *testing.T) {
+	api, repo := new{{.Pascal}}TestAPI(t, {{if .Secured.Update}}{{.Camel}}AcceptingResolver{{else}}{{.Camel}}RejectingResolver{{end}}{})
+	{{.Camel}} := seed{{.Pascal}}(t, repo)
+
+	resp := api.Put("{{.Route}}/"+{{.Camel}}.ID, {{if .Secured.Update}}{{.Camel}}Session, {{end}}map[string]any{ {{.BodyUpdated}}})
+	if resp.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", resp.Code, resp.Body.String())
+	}
+}
+
+func TestUpdate{{.Pascal}}_NotFound(t *testing.T) {
+	api, _ := new{{.Pascal}}TestAPI(t, {{if .Secured.Update}}{{.Camel}}AcceptingResolver{{else}}{{.Camel}}RejectingResolver{{end}}{})
+
+	resp := api.Put("{{.Route}}/does-not-exist", {{if .Secured.Update}}{{.Camel}}Session, {{end}}map[string]any{ {{.BodyUpdated}}})
+	if resp.Code != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d: %s", resp.Code, resp.Body.String())
+	}
+}
+{{end}}{{if .Op.Delete}}{{if .Secured.Delete}}
+func TestDelete{{.Pascal}}_RequiresASession(t *testing.T) {
+	api, _ := new{{.Pascal}}TestAPI(t, {{.Camel}}RejectingResolver{})
+
+	resp := api.Delete("{{.Route}}/does-not-exist")
+	if resp.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 without a session, got %d: %s", resp.Code, resp.Body.String())
+	}
+}
+{{end}}
+func TestDelete{{.Pascal}}(t *testing.T) {
+	api, repo := new{{.Pascal}}TestAPI(t, {{if .Secured.Delete}}{{.Camel}}AcceptingResolver{{else}}{{.Camel}}RejectingResolver{{end}}{})
+	{{.Camel}} := seed{{.Pascal}}(t, repo)
+
+	resp := api.Delete("{{.Route}}/"+{{.Camel}}.ID{{if .Secured.Delete}}, {{.Camel}}Session{{end}})
+	if resp.Code != http.StatusNoContent {
+		t.Fatalf("expected 204, got %d: %s", resp.Code, resp.Body.String())
+	}
+}
+
+func TestDelete{{.Pascal}}_NotFound(t *testing.T) {
+	api, _ := new{{.Pascal}}TestAPI(t, {{if .Secured.Delete}}{{.Camel}}AcceptingResolver{{else}}{{.Camel}}RejectingResolver{{end}}{})
+
+	resp := api.Delete("{{.Route}}/does-not-exist"{{if .Secured.Delete}}, {{.Camel}}Session{{end}})
+	if resp.Code != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d: %s", resp.Code, resp.Body.String())
+	}
+}
+{{end}}

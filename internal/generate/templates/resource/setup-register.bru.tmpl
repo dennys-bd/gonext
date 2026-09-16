@@ -1,0 +1,43 @@
+meta {
+  name: [[.Request]]
+  type: http
+  seq: [[.Seq]]
+}
+
+post {
+  url: {{baseUrl}}/users/register
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "{{[[.DomainCamel]]Email}}",
+    "password": "{{[[.DomainCamel]]Password}}"
+  }
+}
+
+assert {
+  res.status: eq 202
+}
+
+tests {
+  test("returns a dev confirmation token", function () {
+    expect(res.getBody().token).to.be.a("string").and.not.empty;
+  });
+}
+
+script:pre-request {
+  // The [[.Domain]] folder owns its own session and revokes it in its
+  // own Logout request, so it neither depends on nor leaks into any
+  // other folder's cookies. A fresh email per run keeps a persistent
+  // smoke database from taking the already-registered branch.
+  bru.setVar("[[.DomainCamel]]Email", `[[.Domain]]-${Date.now()}-${Math.floor(Math.random() * 100000)}@example.com`);
+  bru.setVar("[[.DomainCamel]]Password", "correct horse battery staple");
+}
+
+script:post-response {
+  if (res.status === 202) {
+    bru.setVar("[[.DomainCamel]]ConfirmToken", res.body.token);
+  }
+}

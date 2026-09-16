@@ -1,0 +1,36 @@
+meta {
+  name: Update Product
+  type: http
+  seq: 20
+}
+
+put {
+  url: {{baseUrl}}/products/{{productId}}
+  body: json
+  auth: none
+}
+
+headers {
+  Cookie: {{exampleSessionCookie}}
+}
+
+body:json {
+  {
+    "title": "demo-updated",
+    "price": 43
+  }
+}
+
+assert {
+  res.status: eq 200
+}
+
+tests {
+  test("replaces every field of the product created by Create Product", function () {
+    const body = res.getBody();
+    expect(body.id).to.equal(bru.getVar("productId"));
+    expect(body.title).to.equal("demo-updated");
+    expect(body.price).to.equal(43);
+    expect(body.updatedAt).to.be.a("string").and.not.empty;
+  });
+}

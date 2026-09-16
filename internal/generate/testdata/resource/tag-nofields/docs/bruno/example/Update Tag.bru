@@ -1,0 +1,31 @@
+meta {
+  name: Update Tag
+  type: http
+  seq: 13
+}
+
+put {
+  url: {{baseUrl}}/tags/{{tagId}}
+  body: json
+  auth: none
+}
+
+headers {
+  Cookie: {{exampleSessionCookie}}
+}
+
+body:json {
+  {}
+}
+
+assert {
+  res.status: eq 200
+}
+
+tests {
+  test("replaces every field of the tag created by Create Tag", function () {
+    const body = res.getBody();
+    expect(body.id).to.equal(bru.getVar("tagId"));
+    expect(body.updatedAt).to.be.a("string").and.not.empty;
+  });
+}
