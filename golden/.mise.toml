@@ -1,3 +1,6 @@
+# Toolchains only: runtimes, package managers and standalone dev binaries
+# that no ecosystem's dependency file can pin. Libraries and Go tools that
+# build inside the module (wire, govulncheck) belong in go.mod / package.json.
 [tools]
 go = "1.26.7"
 node = "24.19.0"
@@ -6,3 +9,8 @@ pnpm = "11.24.0"
 lefthook = "2.1.11"
 gitleaks = "8.30.1"
 "go:github.com/golangci/golangci-lint/v2/cmd/golangci-lint" = "2.6.0"
+
+# Local runtime configuration comes from .env (see .env.example). Loading
+# it here makes every `mise exec --` recipe and activated shell see it.
+[env]
+_.file = ".env"

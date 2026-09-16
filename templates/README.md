@@ -48,7 +48,19 @@ If `frontend/lib/api/` is missing (it is gitignored), `pnpm --dir frontend codeg
 
 ## Development Prerequisites
 
-This repository uses [**`mise`**](https://mise.jdx.dev/) to manage runtime toolchains and developer environments (such as Go versions).
+Two things on the host: [**`mise`**](https://mise.jdx.dev/) and Docker.
+
+`mise` owns the toolchains — language runtimes and package managers (`go`,
+`node`, `pnpm`), the `gonext` CLI, and standalone dev binaries
+(`golangci-lint`, `gitleaks`, `lefthook`, `bru`) — pinned in `.mise.toml`.
+Dependencies stay with their native tool: `go.mod` (including `go tool`
+entries such as `wire` and `govulncheck`) and `pnpm`. Add a new standalone
+binary to `.mise.toml`; add a library to the ecosystem file; never both.
+
+`mise` also loads `.env` into the environment, so `make` targets and your
+shell see the same configuration `gonext` reads. The `gonext` CLI itself
+never invokes `mise`: it only needs `go` and `pnpm` on `PATH`, which `mise`
+provides. Nothing from `mise` ships in a production image.
 
 ### 1. Install `mise`
 
@@ -58,9 +70,11 @@ brew install mise
 ```
 *(For other platforms, see the [official mise installation guide](https://mise.jdx.dev/getting-started.html)).*
 
-### 2. Activate `mise` in Your Shell (If you installed using brew)
+### 2. Activate `mise` in Your Shell
 
-Add `mise` activation to your shell profile if not already done:
+Add `mise` activation to your shell profile if not already done. With the
+hook in place, entering this directory puts the pinned tools and the `.env`
+variables in your shell — you never type `mise exec` yourself:
 
 **Zsh (`~/.zshrc`):**
 ```bash
@@ -81,6 +95,10 @@ plugins=(
     mise
     )
 ```
+
+The `Makefile`, `lefthook.yml` and CI wrap every command in `mise exec --`
+instead, because the shell hook never fires there (an agent's shell, a git
+hook run by an IDE, a CI runner).
 
 ### 3. Install Project Toolchains
 
