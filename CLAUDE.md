@@ -36,7 +36,7 @@ which is `go run ./cmd/golden` — it backs up any existing `golden/` to `golden
 2. Once it works, hand-port the change into the matching file(s) under `templates/`, restoring the `[PROJECT-NAME]` token wherever the concrete `golden-app` module path appears in Go imports.
 3. Run `make golden` to regenerate `golden/` from `templates/` — this discards any leftover experimental code not yet ported and resets `golden/` to exactly match the template.
 
-**The drift guarantee**: `cmd/scaffold/copy_golden_test.go` (`TestCopy_GoldenSnapshot`) runs `scaffold.Copy()` against the real embedded `templates/` and diffs the output byte-for-byte against `golden/`. If `templates/` changes without regenerating `golden/` (or vice versa), this test fails. It excludes only what `Copy()` never writes: `go.mod`, `go.sum`, `.env`, and the tool-generated `frontend/node_modules/`, `frontend/.next/`, `backend/bin/` — everything else must match exactly.
+**The drift guarantee**: `cmd/scaffold/copy_golden_test.go` (`TestCopy_GoldenSnapshot`) runs `scaffold.Copy()` against the real embedded `templates/` and diffs the output byte-for-byte against `golden/`. If `templates/` changes without regenerating `golden/` (or vice versa), this test fails. It excludes only what `Copy()` never writes: `go.mod`, `go.sum`, `mise.local.toml`, and the tool-generated `frontend/node_modules/`, `frontend/.next/`, `backend/bin/` — everything else must match exactly.
 
 **Never hand-edit `golden/` and expect it to persist** — any change not also made in `templates/` is silently discarded by the next `make golden`, and any change made in `golden/` alone (without a matching `templates/` edit) will fail the drift test.
 

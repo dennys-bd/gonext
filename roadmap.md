@@ -26,7 +26,7 @@ Every generated project gets all of these, regardless of which feature packs wer
 |---|---|---|
 | **Backend Framework** | [Echo](https://echo.labstack.com/) + [Huma v2](https://huma.rocks/) | Fast Go HTTP router with automatic OpenAPI 3.1 schema generation and runtime validation. Default engine for the REST tier of the API Protocol Layer — see *API Protocol Layer* below for GraphQL/gRPC alternatives. |
 | **Server Lifecycle** | `signal.NotifyContext` | Graceful shutdown with connection draining on SIGTERM/SIGINT (`templates/backend/main.go`). |
-| **Configuration** | Typed Config + `.env` loaded by `mise` | Centralized type-safe environment configuration (`caarlos0/env` into `config.Config`) read from real environment variables only. Locally, `.env` (schema in `.env.example`) is the single source: `mise` loads it into the environment via `[env]` in `.mise.toml`, and `gonext`'s subcommands load it themselves so the CLI works without `mise`. No per-environment `mise` files — staging and production are deployments that set real variables. |
+| **Configuration** | Typed Config + `mise` `[env]` layers | Centralized type-safe environment configuration (`caarlos0/env` into `config.Config`) read from real environment variables only — the server and the `gonext` CLI never read a file. Locally the variables come from `mise`, in three layers that merge per key: `.mise.toml` (every variable, its dev default, its documentation — the schema), `mise.test.toml` (only what the test environment changes; `make test` selects it with `MISE_ENV=test`) and gitignored `mise.local.toml` (personal overrides and secrets, delivered as a committed `mise.local.toml.example` that states what must be set locally and copied by `gonext init`). No `.env`. Staging and production are deployments that set real variables — no file. |
 | **Logging & Correlation** | Standard `log/slog` | Structured JSON logging with request correlation ID injection (`X-Request-ID`). |
 | **Database Layer** | PostgreSQL + `pgxpool` + [Bun](https://bun.uptrace.dev/) ORM | `pgxpool`-backed connection pool wrapped as a `database/sql` handle for Bun, giving struct-tag-mapped queries (`NewSelect`/`NewInsert`/etc.) with Postgres-aware pooling underneath (`templates/backend/internal/database/database.go`). |
 | **Schema Migrations** | `dbmigrate` (published, over Bun's `migrate` tables) | Hand-written Go migrations living with the domain that owns them — `backend/<domain>/migrations/<NNNN>_<name>.go`, one four-digit sequence per domain — registered from `init()` via `github.com/dennys-bd/gonext/dbmigrate`, which derives domain/version/name from the file path and orders every migration topologically from same-domain sequence plus declared `dbmigrate.After(domain, version)` dependencies. Applied via `gonext migrate` — a CLI-native subcommand (`internal/migrate`) that materializes a temp runner importing every `backend/*/migrations/` directory rather than vendoring a `backend/cmd/migrate` binary. Bookkeeping is Bun's `bun_migrations` table with `<domain>/<NNNN>` names; `Migrator.Migrate` is never used because its name order ignores dependencies. Not `goose`/`golang-migrate`. |
@@ -134,8 +134,8 @@ When generating a new repository from this template, the scaffolding tool (`cmd/
    - Updates `go.mod` and `package.json` to purge unused dependencies.
 3. **Module Initialization**:
    - Replaces module paths and package names across all files.
-   - Generates `.env` files from `.env.example`.
-   - Runs initial migration and generates the OpenAPI client.
+   - Copies `mise.local.toml.example` to the gitignored `mise.local.toml`.
+   - Prints the next steps (`mise install`, `make db-up && make migrate`, `make hooks-install`) — the database bootstrap needs the project's `mise` environment, which `init` runs outside of.
 
 ---
 

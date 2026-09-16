@@ -45,7 +45,7 @@ var generatedDirs = []string{
 
 // generatedFiles are top-level files under golden/ that a later runInit step
 // produces rather than Copy().
-var generatedFiles = []string{"go.mod", "go.sum", ".env"}
+var generatedFiles = []string{"go.mod", "go.sum", localConfig}
 
 // toolStateDirs are gitignored agent-tooling state dirs that can appear at
 // any depth (not just top-level), since a hook writes .omc/ relative to
@@ -77,8 +77,8 @@ func TestIsGeneratedArtifact(t *testing.T) {
 	}{
 		{rel: "go.mod", want: true},
 		{rel: "go.sum", want: true},
-		{rel: ".env", want: true},
-		{rel: ".env.example", want: false},
+		{rel: "mise.local.toml", want: true},
+		{rel: "mise.local.toml.example", want: false},
 		{rel: "frontend/node_modules", want: true},
 		{rel: "frontend/node_modules/next/package.json", want: true},
 		{rel: "frontend/.next/build-manifest.json", want: true},

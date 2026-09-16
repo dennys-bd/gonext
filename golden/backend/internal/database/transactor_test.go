@@ -1,21 +1,18 @@
-package database
+package database_test
 
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 
 	"github.com/uptrace/bun"
+
+	"golden-app/backend/internal/database"
+	"golden-app/backend/internal/database/dbtest"
 )
 
 func TestBunTransactor_RunInTx(t *testing.T) {
-	dsn := os.Getenv("TEST_DATABASE_URL")
-	if dsn == "" {
-		t.Skip("TEST_DATABASE_URL not set; run `make db-up` and export it to run this test")
-	}
-
-	db, err := Connect(context.Background(), dsn)
+	db, err := database.Connect(context.Background(), dbtest.DSN(t))
 	if err != nil {
 		t.Fatalf("connect: %v", err)
 	}
@@ -32,7 +29,7 @@ func TestBunTransactor_RunInTx(t *testing.T) {
 		t.Fatalf("truncating scratch table: %v", err)
 	}
 
-	transactor := NewBunTransactor(db)
+	transactor := database.NewBunTransactor(db)
 
 	t.Run("commits on success", func(t *testing.T) {
 		err := transactor.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {

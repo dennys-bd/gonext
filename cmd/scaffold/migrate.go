@@ -35,11 +35,6 @@ func runMigrate(args []string) int {
 		return 1
 	}
 
-	if err := project.LoadEnv(root); err != nil {
-		fmt.Fprintln(os.Stderr, "error:", err)
-		return 1
-	}
-
 	ctx := context.Background()
 	if target == "" {
 		err = migrate.Apply(ctx, root)

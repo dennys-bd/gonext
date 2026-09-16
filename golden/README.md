@@ -57,10 +57,15 @@ Dependencies stay with their native tool: `go.mod` (including `go tool`
 entries such as `wire` and `govulncheck`) and `pnpm`. Add a new standalone
 binary to `.mise.toml`; add a library to the ecosystem file; never both.
 
-`mise` also loads `.env` into the environment, so `make` targets and your
-shell see the same configuration `gonext` reads. The `gonext` CLI itself
-never invokes `mise`: it only needs `go` and `pnpm` on `PATH`, which `mise`
-provides. Nothing from `mise` ships in a production image.
+`mise` also owns local runtime configuration, as `[env]` in three layers
+that merge per key: `.mise.toml` (every variable, its dev default and its
+documentation), `mise.test.toml` (what the test environment changes;
+`make test` selects it with `MISE_ENV=test`) and gitignored
+`mise.local.toml` (personal overrides and secrets, copied from
+`mise.local.toml.example` by `gonext init`). There is no `.env`; the server
+and the `gonext` CLI read real environment variables only. The CLI never
+invokes `mise`: it needs `go` and `pnpm` on `PATH`, which `mise` provides.
+Nothing from `mise` ships in a production image.
 
 ### 1. Install `mise`
 
@@ -73,7 +78,7 @@ brew install mise
 ### 2. Activate `mise` in Your Shell
 
 Add `mise` activation to your shell profile if not already done. With the
-hook in place, entering this directory puts the pinned tools and the `.env`
+hook in place, entering this directory puts the pinned tools and the `[env]`
 variables in your shell — you never type `mise exec` yourself:
 
 **Zsh (`~/.zshrc`):**

@@ -3,7 +3,6 @@ package dbtest_test
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 
 	"github.com/uptrace/bun"
@@ -12,17 +11,9 @@ import (
 	"[PROJECT-NAME]/backend/internal/database/dbtest"
 )
 
-func requireTestDB(t *testing.T) {
-	t.Helper()
-	if os.Getenv("TEST_DATABASE_URL") == "" {
-		t.Skip("TEST_DATABASE_URL not set; run `make db-up` and export it to run this test")
-	}
-}
-
 func setupScratchTable(t *testing.T) {
 	t.Helper()
-	dsn := os.Getenv("TEST_DATABASE_URL")
-	db, err := database.Connect(context.Background(), dsn)
+	db, err := database.Connect(context.Background(), dbtest.DSN(t))
 	if err != nil {
 		t.Fatalf("connecting to set up scratch table: %v", err)
 	}
@@ -46,8 +37,7 @@ func setupScratchTable(t *testing.T) {
 
 func countScratchRows(t *testing.T) int {
 	t.Helper()
-	dsn := os.Getenv("TEST_DATABASE_URL")
-	db, err := database.Connect(context.Background(), dsn)
+	db, err := database.Connect(context.Background(), dbtest.DSN(t))
 	if err != nil {
 		t.Fatalf("connecting to count scratch rows: %v", err)
 	}
@@ -74,7 +64,7 @@ func countScratchRowsIn(t *testing.T, tx bun.IDB) int {
 }
 
 func TestNew_RollsBackAfterCleanup(t *testing.T) {
-	requireTestDB(t)
+	dbtest.DSN(t)
 	setupScratchTable(t)
 
 	t.Run("insert inside the harness transaction", func(t *testing.T) {
@@ -95,7 +85,7 @@ func TestNew_RollsBackAfterCleanup(t *testing.T) {
 }
 
 func TestNew_TransactorCommitsAndRollsBackWithinOuterTx(t *testing.T) {
-	requireTestDB(t)
+	dbtest.DSN(t)
 	setupScratchTable(t)
 
 	t.Run("commit and rollback via the savepoint transactor", func(t *testing.T) {

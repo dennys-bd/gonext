@@ -60,9 +60,6 @@ func Run(ctx context.Context, fsys fs.FS, cwd string) error {
 	if err != nil {
 		return fmt.Errorf("resolving project root: %w", err)
 	}
-	if err := project.LoadEnv(root); err != nil {
-		return fmt.Errorf("loading .env: %w", err)
-	}
 	modulePath, err := project.ModulePath(root)
 	if err != nil {
 		return fmt.Errorf("reading module path: %w", err)

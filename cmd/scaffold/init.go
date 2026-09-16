@@ -5,15 +5,17 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
 	gonext "github.com/dennys-bd/gonext"
 	xexec "github.com/dennys-bd/gonext/internal/exec"
-	"github.com/dennys-bd/gonext/internal/migrate"
-	"github.com/dennys-bd/gonext/internal/project"
 	"github.com/dennys-bd/gonext/internal/scaffold"
+)
+
+const (
+	localConfig        = "mise.local.toml"
+	localConfigExample = localConfig + ".example"
 )
 
 // runInit implements `gonext init [name] [path] [--agents=<list>]` and
@@ -88,20 +90,18 @@ func runInit(args []string) int {
 		return 1
 	}
 
-	if err := copyEnvFile(dest); err != nil {
-		fmt.Fprintln(os.Stderr, "error: copying .env:", err)
+	if err := copyLocalConfig(dest); err != nil {
+		fmt.Fprintln(os.Stderr, "error: copying mise.local.toml:", err)
 		return 1
-	}
-
-	if err := bootstrapDatabase(ctx, dest); err != nil {
-		fmt.Println("warning: database bootstrap failed:", err)
-		fmt.Println("  run manually: make db-up && gonext migrate")
 	}
 
 	fmt.Println()
 	fmt.Println("Created", dest)
 	fmt.Println("Next steps:")
 	fmt.Println("  cd", dest)
+	fmt.Println("  mise install")
+	fmt.Println("  make db-up && make migrate")
+	fmt.Println("  make hooks-install")
 
 	return 0
 }
@@ -149,41 +149,14 @@ func resolveSlug(name string) (string, error) {
 	}
 }
 
-// copyEnvFile copies dest/.env.example to dest/.env verbatim.
-func copyEnvFile(dest string) error {
-	data, err := os.ReadFile(filepath.Join(dest, ".env.example"))
+// copyLocalConfig copies dest/mise.local.toml.example to dest/mise.local.toml
+// verbatim, owner-only since it is where a developer keeps secrets.
+func copyLocalConfig(dest string) error {
+	data, err := os.ReadFile(filepath.Join(dest, localConfigExample))
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(filepath.Join(dest, ".env"), data, 0o644)
-}
-
-// bootstrapDatabase brings up Postgres via Docker Compose and runs the
-// generated project's own migrations. Any failure is best-effort, reported
-// to the caller as a warning, not fatal.
-func bootstrapDatabase(ctx context.Context, dest string) error {
-	if err := xexec.Run(ctx, dest, "docker", "compose", "up", "-d", "db"); err != nil {
-		return fmt.Errorf("docker compose up: %w", err)
-	}
-
-	err := xexec.WaitHealthy(ctx, xexec.DefaultHealthTimeout, func(ctx context.Context) error {
-		cmd := exec.CommandContext(ctx, "docker", "compose", "exec", "-T", "db", "pg_isready", "-U", "app", "-d", "app")
-		cmd.Dir = dest
-		return cmd.Run()
-	})
-	if err != nil {
-		return fmt.Errorf("waiting for database: %w", err)
-	}
-
-	// The migration runner loads config.Config, which needs
-	// DATABASE_URL; the .env just copied from .env.example carries it.
-	if err := project.LoadEnv(dest); err != nil {
-		return fmt.Errorf("loading .env: %w", err)
-	}
-	if err := migrate.Apply(ctx, dest); err != nil {
-		return fmt.Errorf("running migration: %w", err)
-	}
-	return nil
+	return os.WriteFile(filepath.Join(dest, localConfig), data, 0o600)
 }
 
 // pinGonextModule ties the project to the gonext this CLI was built from
