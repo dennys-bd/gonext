@@ -130,15 +130,17 @@ func Load(root string) (*Document, error) {
 	return &doc, nil
 }
 
-// Operation returns the operation with the given operationId, with
-// its Method (upper-case) and Path filled in from where it was found.
-func (d *Document) Operation(id string) (*Operation, error) {
+// Operations returns every operation in the document, with Method
+// (upper-case) and Path filled in, ordered by path then by the fixed
+// method order GET, PUT, POST, DELETE, OPTIONS, HEAD, PATCH.
+func (d *Document) Operations() []Operation {
 	paths := make([]string, 0, len(d.Paths))
 	for p := range d.Paths {
 		paths = append(paths, p)
 	}
 	sort.Strings(paths)
 
+	var ops []Operation
 	for _, p := range paths {
 		item := d.Paths[p]
 		for _, m := range []struct {
@@ -153,12 +155,23 @@ func (d *Document) Operation(id string) (*Operation, error) {
 			{"HEAD", item.Head},
 			{"PATCH", item.Patch},
 		} {
-			if m.op == nil || m.op.OperationID != id {
+			if m.op == nil {
 				continue
 			}
 			op := *m.op
 			op.Method = m.name
 			op.Path = p
+			ops = append(ops, op)
+		}
+	}
+	return ops
+}
+
+// Operation returns the operation with the given operationId, with
+// its Method (upper-case) and Path filled in from where it was found.
+func (d *Document) Operation(id string) (*Operation, error) {
+	for _, op := range d.Operations() {
+		if op.OperationID == id {
 			return &op, nil
 		}
 	}

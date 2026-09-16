@@ -35,6 +35,24 @@ func TestPascalCase(t *testing.T) {
 	}
 }
 
+func TestCallName(t *testing.T) {
+	tests := []struct {
+		name string
+		op   *openapi.Operation
+		want string
+	}{
+		{name: "tagged", op: &openapi.Operation{OperationID: "get-stub", Tags: []string{"Example"}}, want: "api.example.getStub"},
+		{name: "no tags", op: &openapi.Operation{OperationID: "healthz"}, want: "api.default.healthz"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := callName(tt.op); got != tt.want {
+				t.Errorf("callName(%+v) = %q, want %q", tt.op, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestHumanize(t *testing.T) {
 	tests := map[string]string{
 		"createdAt": "Created at",

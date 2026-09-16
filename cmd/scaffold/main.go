@@ -25,6 +25,8 @@ func main() {
 		os.Exit(runDev(os.Args[2:]))
 	case "openapi":
 		os.Exit(runOpenAPI(os.Args[2:]))
+	case "routes":
+		os.Exit(runRoutes(os.Args[2:]))
 	default:
 		usage()
 		os.Exit(1)
@@ -41,4 +43,5 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "       gonext migrate [<domain>/<version>] [--yes]")
 	fmt.Fprintln(os.Stderr, "       gonext dev")
 	fmt.Fprintln(os.Stderr, "       gonext openapi [--check]")
+	fmt.Fprintln(os.Stderr, "       gonext routes")
 }
