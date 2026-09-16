@@ -10,6 +10,7 @@ import (
 
 	"github.com/dennys-bd/gonext/auth"
 
+	"golden-app/backend/internal/config"
 	"golden-app/backend/users/domain"
 	"golden-app/backend/users/internal/idgen"
 )
@@ -19,13 +20,6 @@ const (
 	confirmationTokenTTL = 24 * time.Hour
 	resetTokenTTL        = time.Hour
 )
-
-// IsRelaxedEnv reports whether env relaxes safety for local development: raw
-// tokens are returned, unconfirmed logins are allowed, and the cookie drops Secure.
-// Everything else, including stg, is restricted; both the application and HTTP layers gate on this.
-func IsRelaxedEnv(env string) bool {
-	return env == "dev" || env == "test"
-}
 
 // UserService implements the users domain's account, session, and
 // one-shot token use cases.
@@ -39,7 +33,7 @@ type UserService struct {
 }
 
 // NewUserService constructs a UserService. env selects the behaviour
-// boundary documented on IsRelaxedEnv.
+// boundary documented on config.IsRelaxedEnv.
 func NewUserService(
 	store domain.Store,
 	tx domain.TxRunner,
@@ -52,7 +46,7 @@ func NewUserService(
 }
 
 // RegisterResult is what Register returns. DevToken carries the raw
-// confirmation token in a relaxed environment (see IsRelaxedEnv) and is empty otherwise.
+// confirmation token in a relaxed environment (see config.IsRelaxedEnv) and is empty otherwise.
 type RegisterResult struct {
 	DevToken string
 }
@@ -137,7 +131,7 @@ func (s *UserService) Login(ctx context.Context, email, password string) (string
 
 	// Safe to reveal outside the generic error: the caller already
 	// proved they know the password.
-	if !IsRelaxedEnv(s.env) && !user.EmailVerified() {
+	if !config.IsRelaxedEnv(s.env) && !user.EmailVerified() {
 		return "", time.Time{}, domain.ErrEmailNotConfirmed
 	}
 
@@ -298,7 +292,7 @@ func invalidTokenError(kind domain.TokenKind) error {
 
 // devToken returns raw in a relaxed environment and "" everywhere else.
 func (s *UserService) devToken(raw string) string {
-	if IsRelaxedEnv(s.env) {
+	if config.IsRelaxedEnv(s.env) {
 		return raw
 	}
 	return ""

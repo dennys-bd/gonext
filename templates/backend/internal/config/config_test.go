@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"slices"
 	"testing"
 	"time"
 )
@@ -26,7 +27,7 @@ func unsetEnv(t *testing.T, keys ...string) {
 }
 
 func TestLoad_Defaults(t *testing.T) {
-	unsetEnv(t, "ENV", "PORT", "LOG_LEVEL", "LOG_FORMAT", "SHUTDOWN_TIMEOUT")
+	unsetEnv(t, "ENV", "PORT", "LOG_LEVEL", "LOG_FORMAT", "SHUTDOWN_TIMEOUT", "RATE_LIMIT_RPS", "RATE_LIMIT_BURST", "TRUSTED_PROXIES")
 	t.Setenv("DATABASE_URL", testDatabaseURL)
 
 	cfg, err := Load()
@@ -51,6 +52,15 @@ func TestLoad_Defaults(t *testing.T) {
 	if cfg.DatabaseURL != testDatabaseURL {
 		t.Errorf("expected DatabaseURL %q, got %q", testDatabaseURL, cfg.DatabaseURL)
 	}
+	if cfg.RateLimitRPS != 20 {
+		t.Errorf("expected default RateLimitRPS 20, got %v", cfg.RateLimitRPS)
+	}
+	if cfg.RateLimitBurst != 40 {
+		t.Errorf("expected default RateLimitBurst 40, got %d", cfg.RateLimitBurst)
+	}
+	if len(cfg.TrustedProxies) != 0 {
+		t.Errorf("expected no default TrustedProxies, got %v", cfg.TrustedProxies)
+	}
 }
 
 func TestLoad_ValidationErrors(t *testing.T) {
@@ -64,6 +74,10 @@ func TestLoad_ValidationErrors(t *testing.T) {
 		{"port above range", map[string]string{"PORT": "70000"}},
 		{"non-positive shutdown timeout", map[string]string{"SHUTDOWN_TIMEOUT": "0s"}},
 		{"invalid log format", map[string]string{"LOG_FORMAT": "xml"}},
+		{"non-positive rate limit rps", map[string]string{"RATE_LIMIT_RPS": "0"}},
+		{"zero rate limit burst", map[string]string{"RATE_LIMIT_BURST": "0"}},
+		{"malformed trusted proxy", map[string]string{"TRUSTED_PROXIES": "nope"}},
+		{"one malformed among valid trusted proxies", map[string]string{"TRUSTED_PROXIES": "10.0.0.0/8,nope"}},
 	}
 
 	for _, tt := range tests {
@@ -84,5 +98,54 @@ func TestLoad_MissingDatabaseURL(t *testing.T) {
 
 	if _, err := Load(); err == nil {
 		t.Fatal("expected an error, got nil")
+	}
+}
+
+func TestLoad_TrustedProxies(t *testing.T) {
+	tests := []struct {
+		name  string
+		value string
+		want  []string
+	}{
+		{"empty is none", "", nil},
+		{"one", "10.0.0.0/8", []string{"10.0.0.0/8"}},
+		{"two", "10.0.0.0/8,192.168.0.0/16", []string{"10.0.0.0/8", "192.168.0.0/16"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("DATABASE_URL", testDatabaseURL)
+			t.Setenv("TRUSTED_PROXIES", tt.value)
+
+			cfg, err := Load()
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if !slices.Equal(cfg.TrustedProxies, tt.want) {
+				t.Errorf("TrustedProxies = %v, want %v", cfg.TrustedProxies, tt.want)
+			}
+		})
+	}
+}
+
+// stg sits on the restricted side with prod, not the relaxed side with dev/test.
+func TestIsRelaxedEnv(t *testing.T) {
+	tests := []struct {
+		env  string
+		want bool
+	}{
+		{"dev", true},
+		{"test", true},
+		{"stg", false},
+		{"prod", false},
+		{"", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.env, func(t *testing.T) {
+			if got := IsRelaxedEnv(tt.env); got != tt.want {
+				t.Fatalf("env %q: expected %v, got %v", tt.env, tt.want, got)
+			}
+		})
 	}
 }

@@ -6,7 +6,7 @@ import (
 
 	"github.com/dennys-bd/gonext/auth"
 
-	"golden-app/backend/users/internal/application"
+	"golden-app/backend/internal/config"
 )
 
 // CookieOptions carries the transport-level session cookie policy.
@@ -18,9 +18,9 @@ type CookieOptions struct {
 }
 
 // NewCookieOptions derives the cookie policy from env, gating on
-// application.IsRelaxedEnv so cookie and use-case policy cannot disagree.
+// config.IsRelaxedEnv so cookie and use-case policy cannot disagree.
 func NewCookieOptions(env string) CookieOptions {
-	return CookieOptions{Secure: !application.IsRelaxedEnv(env)}
+	return CookieOptions{Secure: !config.IsRelaxedEnv(env)}
 }
 
 // sessionCookie builds the Set-Cookie value that stores token.
